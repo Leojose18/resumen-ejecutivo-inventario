@@ -1,35 +1,44 @@
 ﻿/* =====================================================================
    INV_VERIFICAR.sql  -  SOLO CONSULTA (no modifica la base de datos)
-   Abrir en SSMS sobre HD_A01, ejecutar (F5) y mandar capturas.
+   Chequeos en $ (ult_cos_om y reng_neto / tasa). Ejecutar (F5) y
+   mandar captura de la pestaña Resultados.
    ===================================================================== */
 USE HD_A01;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
--- 1) ¿El costo en $ (cos_pro_om) está cargado en los artículos con stock?
-SELECT COUNT(*) AS art_con_stock,
-       SUM(CASE WHEN cos_pro_om > 0 THEN 1 ELSE 0 END) AS con_cos_om,
-       SUM(CASE WHEN cos_pro_un > 0 THEN 1 ELSE 0 END) AS con_cos_bs
-FROM dbo.art WHERE stock_act > 0 AND anulado = 0;
+-- 1) Valor del inventario en $ con ult_cos_om, y costos inválidos
+SELECT SUM(s.stock_act * a.ult_cos_om)                        AS valor_inv_usd,
+       SUM(CASE WHEN a.ult_cos_om < 0  THEN 1 ELSE 0 END)     AS art_costo_negativo,
+       SUM(CASE WHEN a.ult_cos_om = 0  THEN 1 ELSE 0 END)     AS art_costo_cero,
+       SUM(CASE WHEN s.stock_act < 0   THEN 1 ELSE 0 END)     AS art_stock_negativo
+FROM (SELECT co_art, SUM(stock_act) AS stock_act FROM dbo.st_almac GROUP BY co_art) s
+JOIN dbo.art a ON a.co_art = s.co_art
+WHERE s.stock_act <> 0 AND a.anulado = 0;
 
--- 2) Facturas de los últimos 90 días (base de la rotación)
-SELECT COUNT(*) AS facturas_90d
-FROM dbo.factura WHERE anulada = 0 AND fec_emis >= DATEADD(day,-90,GETDATE());
+-- 2) Venta, costo y margen en $ de los últimos 90 días (facturas - devoluciones)
+SELECT SUM(v) AS venta_usd_90d, SUM(c) AS costo_usd_90d,
+       SUM(v) - SUM(c) AS margen_usd_90d,
+       CAST((SUM(v) - SUM(c)) / NULLIF(SUM(v),0) * 100 AS decimal(10,1)) AS margen_pct
+FROM (
+    SELECT rf.reng_neto / NULLIF(f.tasa,0) AS v, rf.total_art * rf.ult_cos_om AS c
+    FROM dbo.reng_fac rf JOIN dbo.factura f ON f.fact_num = rf.fact_num
+    WHERE f.anulada = 0 AND f.fec_emis >= DATEADD(day,-90,CAST(GETDATE() AS date))
+    UNION ALL
+    SELECT -rd.reng_neto / NULLIF(d.tasa,0), -rd.total_art * rd.ult_cos_om
+    FROM dbo.reng_dvc rd JOIN dbo.dev_cli d ON d.fact_num = rd.fact_num
+    WHERE d.anulada = 0 AND d.fec_emis >= DATEADD(day,-90,CAST(GETDATE() AS date))
+) x;
 
--- 3) Notas de entrega: buscar la tabla en el catálogo (no falla si no existe)
-SELECT t.name AS tabla, SUM(p.rows) AS filas
-FROM sys.tables t
-JOIN sys.partitions p ON p.object_id = t.object_id AND p.index_id IN (0,1)
-WHERE t.name IN ('reng_nde','not_ent','nota_ent','not_de')
-GROUP BY t.name;
+-- 3) Líneas facturadas sin tasa (no se pueden pasar a $)
+SELECT COUNT(*) AS lineas_sin_tasa_90d
+FROM dbo.reng_fac rf JOIN dbo.factura f ON f.fact_num = rf.fact_num
+WHERE f.anulada = 0 AND ISNULL(f.tasa,0) = 0
+  AND f.fec_emis >= DATEADD(day,-90,CAST(GETDATE() AS date));
 
--- 4) Cuadre: stock en art vs suma de almacenes
-SELECT COUNT(*) AS articulos_descuadrados
-FROM dbo.art a
-JOIN (SELECT co_art, SUM(stock_act) s FROM dbo.st_almac GROUP BY co_art) x ON x.co_art = a.co_art
-WHERE ABS(a.stock_act - x.s) > 0.001;
-
--- 5) Valor total del inventario hoy
-SELECT SUM(s.stock_act * a.cos_pro_un) AS valor_bs,
-       SUM(s.stock_act * a.cos_pro_om) AS valor_om
-FROM dbo.st_almac s JOIN dbo.art a ON a.co_art = s.co_art
-WHERE s.stock_act > 0;
+-- 4) Los 15 artículos con mayor valor de inventario en $ (revisar que tengan sentido)
+SELECT TOP 15 RTRIM(a.co_art) AS co_art, RTRIM(a.art_des) AS descripcion,
+       s.stock_act, a.ult_cos_om, s.stock_act * a.ult_cos_om AS valor_usd
+FROM (SELECT co_art, SUM(stock_act) AS stock_act FROM dbo.st_almac GROUP BY co_art) s
+JOIN dbo.art a ON a.co_art = s.co_art
+WHERE s.stock_act > 0 AND a.anulado = 0
+ORDER BY ABS(s.stock_act * a.ult_cos_om) DESC;

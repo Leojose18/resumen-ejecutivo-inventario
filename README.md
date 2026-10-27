@@ -6,9 +6,9 @@ Informe semanal de inventario desde Profit Plus Administrativo 2K8 (SQL Server 2
 objetos o datos en SQL Server. Solo se ejecutan SELECT y el resultado se guarda en archivos CSV.
 
 ## Qué calcula
-- Valor del inventario (Bs y $) por artículo, línea, categoría y procedencia
-- Ventas netas de 90 días (facturas menos devoluciones), venta diaria y cobertura en días
-- Rotación (aprox. con stock actual) y clasificación ABC por costo de venta
+- TODO EN $: inventario valorado con `ult_cos_om`; ventas = `reng_neto / tasa` (neto de descuento); costo de venta = `ult_cos_om` de cada línea
+- Ventas, costo y margen en $ de 90 días (facturas menos devoluciones), venta diaria y cobertura en días
+- Rotación (aprox. con stock actual) y clasificación ABC por venta en $
 - Estado: ALTA (≤30 días de cobertura) / MEDIA (≤90) / BAJA (>90) / SIN MOVIMIENTO / AGOTADO
 - Foto semanal fechada del inventario por almacén = costeo a una fecha
 
