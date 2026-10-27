@@ -20,6 +20,7 @@ objetos o datos en SQL Server. Solo se ejecutan SELECT y el resultado se guarda 
 | `sql/INV_FOTO.sql` | Foto del inventario por almacén con costo |
 | `sql/INV_VERIFICAR.sql` | Chequeos de calidad de datos (correr a mano en SSMS) |
 | `job/JOB_INVENTARIO_KD.cmd` | Paso CmdExec del job semanal |
+| `job/EXPORTAR_CSV.ps1` | Ejecuta cada consulta en conexión de solo lectura y escribe el CSV; rechaza cualquier archivo .sql con sentencias de escritura |
 
 ## Salidas (`salidas\`)
 - `INV_ROTACION_KD.csv` y `INV_RESUMEN_LINEA_KD.csv`: se sobreescriben cada semana (File ID estable en Drive)
