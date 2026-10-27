@@ -1,4 +1,4 @@
-/* =====================================================================
+﻿/* =====================================================================
    INV_01_INSTALAR.sql  -  Informe semanal de inventario Krash Depot
    Correr UNA sola vez en SSMS (servidor WIN-KRASHDEPOT).
    Crea una base aparte (KD_REPORTES) para no tocar las tablas de Profit.
