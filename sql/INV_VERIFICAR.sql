@@ -15,9 +15,12 @@ FROM dbo.art WHERE stock_act > 0 AND anulado = 0;
 SELECT COUNT(*) AS facturas_90d
 FROM dbo.factura WHERE anulada = 0 AND fec_emis >= DATEADD(day,-90,GETDATE());
 
--- 3) ¿Existen notas de entrega? (si dan error, no se usan; ignorar)
-SELECT COUNT(*) AS notas_entrega_90d
-FROM dbo.nota_ent WHERE anulada = 0 AND fec_emis >= DATEADD(day,-90,GETDATE());
+-- 3) Notas de entrega: buscar la tabla en el catálogo (no falla si no existe)
+SELECT t.name AS tabla, SUM(p.rows) AS filas
+FROM sys.tables t
+JOIN sys.partitions p ON p.object_id = t.object_id AND p.index_id IN (0,1)
+WHERE t.name IN ('reng_nde','not_ent','nota_ent','not_de')
+GROUP BY t.name;
 
 -- 4) Cuadre: stock en art vs suma de almacenes
 SELECT COUNT(*) AS articulos_descuadrados
