@@ -18,7 +18,10 @@ REM 1) Detalle por articulo (se sobreescribe)
 REM 2) Resumen por linea (se sobreescribe)
 %PS% "%BASE%\sql\INV_RESUMEN_LINEA.sql" "%BASE%\salidas\INV_RESUMEN_LINEA_KD.csv" || exit /b 1
 
-REM 3) Foto del inventario a la fecha (archivo nuevo cada semana = costeo historico)
+REM 3) Venta diaria por linea desde hace dos anos (analisis por semana, mes y ano)
+%PS% "%BASE%\sql\INV_VENTAS_DIARIAS.sql" "%BASE%\salidas\INV_VENTAS_DIARIAS_KD.csv" || exit /b 1
+
+REM 4) Foto del inventario a la fecha (archivo nuevo cada semana = costeo historico)
 %PS% "%BASE%\sql\INV_FOTO.sql" "%BASE%\salidas\historico\INV_FOTO_%HOY%.csv" || exit /b 1
 
 exit /b 0

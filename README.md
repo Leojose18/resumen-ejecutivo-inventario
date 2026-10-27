@@ -17,6 +17,7 @@ objetos o datos en SQL Server. Solo se ejecutan SELECT y el resultado se guarda 
 |---|---|
 | `sql/INV_ROTACION.sql` | Detalle por artículo |
 | `sql/INV_RESUMEN_LINEA.sql` | Resumen por línea |
+| `sql/INV_VENTAS_DIARIAS.sql` | Venta, costo y unidades por día y línea desde el 1 de enero de hace dos años |
 | `sql/INV_FOTO.sql` | Foto del inventario por almacén con costo |
 | `sql/INV_VERIFICAR.sql` | Chequeos de calidad de datos (correr a mano en SSMS) |
 | `job/JOB_INVENTARIO_KD.cmd` | Paso CmdExec del job semanal |
@@ -24,6 +25,7 @@ objetos o datos en SQL Server. Solo se ejecutan SELECT y el resultado se guarda 
 
 ## Salidas (`salidas\`)
 - `INV_ROTACION_KD.csv` y `INV_RESUMEN_LINEA_KD.csv`: se sobreescriben cada semana (File ID estable en Drive)
+- `INV_VENTAS_DIARIAS_KD.csv`: venta diaria por línea, base del análisis por semana, mes y año (se sobreescribe)
 - `historico\INV_FOTO_AAAAMMDD.csv`: un archivo por semana para el costeo a fecha
 
 ## Instalación
