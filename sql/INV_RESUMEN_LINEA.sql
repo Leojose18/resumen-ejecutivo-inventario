@@ -90,6 +90,7 @@ WITH vta AS (
                 WHEN c.acum_prev < 0.95  THEN 'B'
                 ELSE 'C' END AS clase_abc,
            CASE WHEN c.uds > 0 AND c.stock <= 0 THEN 'AGOTADO'
+                WHEN c.uds <= 0 AND c.ult_compra >= DATEADD(day, -30, @hasta) THEN 'NUEVO INGRESO'
                 WHEN c.uds <= 0                 THEN 'SIN MOVIMIENTO'
                 WHEN c.cobertura <= 30          THEN 'ALTA'
                 WHEN c.cobertura <= 90          THEN 'MEDIA'
@@ -106,13 +107,14 @@ WITH vta AS (
            SUM(costo_usd) / NULLIF(SUM(CASE WHEN stock > 0 THEN valor_usd ELSE 0 END), 0) AS rotacion,
            SUM(CASE WHEN estado = 'SIN MOVIMIENTO' THEN valor_usd ELSE 0 END) AS valor_sin_mov_usd,
            SUM(CASE WHEN estado = 'BAJA'           THEN valor_usd ELSE 0 END) AS valor_baja_rot_usd,
+           SUM(CASE WHEN estado = 'NUEVO INGRESO'  THEN valor_usd ELSE 0 END) AS valor_nuevo_ingreso_usd,
            SUM(CASE WHEN estado = 'AGOTADO'        THEN 1 ELSE 0 END)         AS agotados
     FROM fin
     GROUP BY linea
 )
 SELECT fila FROM (
     SELECT 0 AS ord, CAST(0 AS decimal(20,2)) AS k,
-           'fecha_corte;linea;articulos;art_con_stock;valor_inv_usd;venta_usd_90d;costo_venta_usd_90d;margen_usd_90d;margen_pct;rotacion_90d;valor_sin_mov_usd;valor_baja_rot_usd;agotados' AS fila
+           'fecha_corte;linea;articulos;art_con_stock;valor_inv_usd;venta_usd_90d;costo_venta_usd_90d;margen_usd_90d;margen_pct;rotacion_90d;valor_sin_mov_usd;valor_baja_rot_usd;valor_nuevo_ingreso_usd;agotados' AS fila
     UNION ALL
     SELECT 1, -valor_inv_usd, CONCAT(
         CONVERT(varchar(10), @hasta, 23), ';', REPLACE(linea,';',','), ';',
@@ -120,7 +122,7 @@ SELECT fila FROM (
         CAST(valor_inv_usd AS decimal(20,2)), ';', CAST(venta_usd AS decimal(20,2)), ';', CAST(costo_usd AS decimal(20,2)), ';',
         CAST(venta_usd - costo_usd AS decimal(20,2)), ';',
         CAST(CASE WHEN venta_usd > 0 THEN (venta_usd - costo_usd) / venta_usd * 100 END AS decimal(20,1)), ';',
-        CAST(rotacion AS decimal(20,2)), ';', CAST(valor_sin_mov_usd AS decimal(20,2)), ';', CAST(valor_baja_rot_usd AS decimal(20,2)), ';', agotados)
+        CAST(rotacion AS decimal(20,2)), ';', CAST(valor_sin_mov_usd AS decimal(20,2)), ';', CAST(valor_baja_rot_usd AS decimal(20,2)), ';', CAST(valor_nuevo_ingreso_usd AS decimal(20,2)), ';', agotados)
     FROM res
 ) x
 ORDER BY ord, k;

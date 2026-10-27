@@ -90,6 +90,7 @@ WITH vta AS (
                 WHEN c.acum_prev < 0.95  THEN 'B'
                 ELSE 'C' END AS clase_abc,
            CASE WHEN c.uds > 0 AND c.stock <= 0 THEN 'AGOTADO'
+                WHEN c.uds <= 0 AND c.ult_compra >= DATEADD(day, -30, @hasta) THEN 'NUEVO INGRESO'
                 WHEN c.uds <= 0                 THEN 'SIN MOVIMIENTO'
                 WHEN c.cobertura <= 30          THEN 'ALTA'
                 WHEN c.cobertura <= 90          THEN 'MEDIA'

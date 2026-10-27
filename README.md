@@ -9,7 +9,7 @@ objetos o datos en SQL Server. Solo se ejecutan SELECT y el resultado se guarda 
 - TODO EN $: inventario valorado con `ult_cos_om`; ventas = `reng_neto / tasa` (neto de descuento); costo de venta = `ult_cos_om` de cada línea
 - Ventas, costo y margen en $ de 90 días (facturas menos devoluciones), venta diaria y cobertura en días
 - Rotación (aprox. con stock actual) y clasificación ABC por venta en $
-- Estado: ALTA (≤30 días de cobertura) / MEDIA (≤90) / BAJA (>90) / SIN MOVIMIENTO / AGOTADO
+- Estado: ALTA (≤30 días de cobertura) / MEDIA (≤90) / BAJA (>90) / NUEVO INGRESO (sin ventas, comprado hace ≤30 días) / SIN MOVIMIENTO / AGOTADO
 - Foto semanal fechada del inventario por almacén = costeo a una fecha
 
 ## Estructura
