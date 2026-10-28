@@ -21,11 +21,13 @@ objetos o datos en SQL Server. Solo se ejecutan SELECT y el resultado se guarda 
 | `sql/INV_FOTO.sql` | Foto del inventario por almacén con costo |
 | `sql/INV_VERIFICAR.sql` | Chequeos de calidad de datos (correr a mano en SSMS) |
 | `job/JOB_INVENTARIO_KD.cmd` | Paso CmdExec del job semanal |
+| `job/GENERAR_EMAIL.ps1` | Arma el correo HTML del resumen ejecutivo a partir de los CSV (no toca la base de datos) |
 | `job/EXPORTAR_CSV.ps1` | Ejecuta cada consulta en conexión de solo lectura y escribe el CSV; rechaza cualquier archivo .sql con sentencias de escritura |
 
 ## Salidas (`salidas\`)
 - `INV_ROTACION_KD.csv` y `INV_RESUMEN_LINEA_KD.csv`: se sobreescriben cada semana (File ID estable en Drive)
 - `INV_VENTAS_DIARIAS_KD.csv`: venta diaria por línea, base del análisis por semana, mes y año (se sobreescribe)
+- `INV_EMAIL_KD.html`: correo del resumen ejecutivo; Make lo envía por Gmail cuando se actualiza
 - `historico\INV_FOTO_AAAAMMDD.csv`: un archivo por semana para el costeo a fecha
 
 ## Instalación

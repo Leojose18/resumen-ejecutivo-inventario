@@ -24,4 +24,7 @@ REM 3) Venta diaria por linea desde hace dos anos (analisis por semana, mes y an
 REM 4) Foto del inventario a la fecha (archivo nuevo cada semana = costeo historico)
 %PS% "%BASE%\sql\INV_FOTO.sql" "%BASE%\salidas\historico\INV_FOTO_%HOY%.csv" || exit /b 1
 
+REM 5) Correo HTML del resumen ejecutivo (lee los CSV de arriba; no toca la base de datos)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%BASE%\job\GENERAR_EMAIL.ps1" "%BASE%" || exit /b 1
+
 exit /b 0
