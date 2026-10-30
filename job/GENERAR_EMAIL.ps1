@@ -23,7 +23,7 @@ function N($s) {
     return $null
 }
 function Z($s) { $v = N $s; if ($v -eq $null) { return 0.0 } else { return $v } }
-function H($s) { return [System.Net.WebUtility]::HtmlEncode([string]$s) }
+function HtmlTxt($s) { return [System.Net.WebUtility]::HtmlEncode([string]$s) }
 function USD($v) { if ($v -eq $null) { return '&mdash;' } return '$' + ([double]$v).ToString('N0', $inv) }
 function USDC($v) {
     if ($v -eq $null) { return '&mdash;' }
@@ -170,20 +170,20 @@ function KPI([string]$label, [string]$valor, [string]$nota, [string]$color) {
 }
 
 $filasAgot = ''
-foreach ($r in $topAgot) { $filasAgot += '<tr><td style="' + $td + '">' + (H $r.descripcion) + '<div style="color:#9ca3af;font-size:11px">' + (H $r.co_art) + ' &middot; ' + (H $r.linea) + '</div></td><td style="' + $tdr + '">' + (USD (Z $r.venta_usd_90d)) + '</td><td style="' + $tdr + '">' + (INT (Z $r.uds_vendidas_90d)) + '</td></tr>' }
+foreach ($r in $topAgot) { $filasAgot += '<tr><td style="' + $td + '">' + (HtmlTxt $r.descripcion) + '<div style="color:#9ca3af;font-size:11px">' + (HtmlTxt $r.co_art) + ' &middot; ' + (HtmlTxt $r.linea) + '</div></td><td style="' + $tdr + '">' + (USD (Z $r.venta_usd_90d)) + '</td><td style="' + $tdr + '">' + (INT (Z $r.uds_vendidas_90d)) + '</td></tr>' }
 $filasSobre = ''
-foreach ($r in $topSobre) { $filasSobre += '<tr><td style="' + $td + '">' + (H $r.descripcion) + '<div style="color:#9ca3af;font-size:11px">' + (H $r.co_art) + ' &middot; ' + (H $r.linea) + '</div></td><td style="' + $tdr + '">' + (INT (Z $r.stock)) + '</td><td style="' + $tdr + '">' + (INT (N $r.cobertura_dias)) + ' d&iacute;as</td><td style="' + $tdr + '">' + (USD (Z $r.valor_inv_usd)) + '</td></tr>' }
+foreach ($r in $topSobre) { $filasSobre += '<tr><td style="' + $td + '">' + (HtmlTxt $r.descripcion) + '<div style="color:#9ca3af;font-size:11px">' + (HtmlTxt $r.co_art) + ' &middot; ' + (HtmlTxt $r.linea) + '</div></td><td style="' + $tdr + '">' + (INT (Z $r.stock)) + '</td><td style="' + $tdr + '">' + (INT (N $r.cobertura_dias)) + ' d&iacute;as</td><td style="' + $tdr + '">' + (USD (Z $r.valor_inv_usd)) + '</td></tr>' }
 $filasRot = ''
-foreach ($r in $topRot) { $filasRot += '<tr><td style="' + $td + '">' + (H $r.descripcion) + '<div style="color:#9ca3af;font-size:11px">' + (H $r.co_art) + ' &middot; ' + (H $r.linea) + '</div></td><td style="' + $tdr + '">' + (USD (Z $r.venta_usd_90d)) + '</td><td style="' + $tdr + '">' + (P100 (N $r.margen_pct)) + '</td><td style="' + $tdr + '">' + (INT (N $r.cobertura_dias)) + ' d&iacute;as</td></tr>' }
+foreach ($r in $topRot) { $filasRot += '<tr><td style="' + $td + '">' + (HtmlTxt $r.descripcion) + '<div style="color:#9ca3af;font-size:11px">' + (HtmlTxt $r.co_art) + ' &middot; ' + (HtmlTxt $r.linea) + '</div></td><td style="' + $tdr + '">' + (USD (Z $r.venta_usd_90d)) + '</td><td style="' + $tdr + '">' + (P100 (N $r.margen_pct)) + '</td><td style="' + $tdr + '">' + (INT (N $r.cobertura_dias)) + ' d&iacute;as</td></tr>' }
 $filasLin = ''
-foreach ($r in $topLin) { $filasLin += '<tr><td style="' + $td + '">' + (H $r.linea) + '</td><td style="' + $tdr + '">' + (USD (Z $r.valor_inv_usd)) + '</td><td style="' + $tdr + '">' + (USD (Z $r.venta_usd_90d)) + '</td><td style="' + $tdr + '">' + (P100 (N $r.margen_pct)) + '</td><td style="' + $tdr + '">' + (USD (Z $r.valor_sin_mov_usd)) + '</td><td style="' + $tdr + '">' + (INT (Z $r.agotados)) + '</td></tr>' }
+foreach ($r in $topLin) { $filasLin += '<tr><td style="' + $td + '">' + (HtmlTxt $r.linea) + '</td><td style="' + $tdr + '">' + (USD (Z $r.valor_inv_usd)) + '</td><td style="' + $tdr + '">' + (USD (Z $r.venta_usd_90d)) + '</td><td style="' + $tdr + '">' + (P100 (N $r.margen_pct)) + '</td><td style="' + $tdr + '">' + (USD (Z $r.valor_sin_mov_usd)) + '</td><td style="' + $tdr + '">' + (INT (Z $r.agotados)) + '</td></tr>' }
 
 $alertas = ''
 if ($topAgot.Count -gt 0) {
-    $alertas += '<li style="margin-bottom:8px"><b style="color:#b42318">Reponer:</b> ' + (H $topAgot[0].descripcion) + ' vendi&oacute; ' + (USD (Z $topAgot[0].venta_usd_90d)) + ' en 90 d&iacute;as y hoy no tiene stock.</li>'
+    $alertas += '<li style="margin-bottom:8px"><b style="color:#b42318">Reponer:</b> ' + (HtmlTxt $topAgot[0].descripcion) + ' vendi&oacute; ' + (USD (Z $topAgot[0].venta_usd_90d)) + ' en 90 d&iacute;as y hoy no tiene stock.</li>'
 }
 if ($topSobre.Count -gt 0) {
-    $alertas += '<li style="margin-bottom:8px"><b style="color:#b45309">Sobrestock:</b> ' + (H $topSobre[0].descripcion) + ' tiene ' + (INT (Z $topSobre[0].stock)) + ' unidades y ' + (INT (N $topSobre[0].cobertura_dias)) + ' d&iacute;as de cobertura (' + (USD (Z $topSobre[0].valor_inv_usd)) + ').</li>'
+    $alertas += '<li style="margin-bottom:8px"><b style="color:#b45309">Sobrestock:</b> ' + (HtmlTxt $topSobre[0].descripcion) + ' tiene ' + (INT (Z $topSobre[0].stock)) + ' unidades y ' + (INT (N $topSobre[0].cobertura_dias)) + ' d&iacute;as de cobertura (' + (USD (Z $topSobre[0].valor_inv_usd)) + ').</li>'
 }
 $alertas += '<li style="margin-bottom:8px"><b style="color:#b45309">Capital inmovilizado:</b> ' + (USD $vSinMov) + ' en ' + (INT $sinMov.Count) + ' art&iacute;culos sin ventas en 90 d&iacute;as.</li>'
 if ($negativos.Count -gt 0) {
