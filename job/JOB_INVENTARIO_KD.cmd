@@ -27,4 +27,7 @@ REM 4) Foto del inventario a la fecha (archivo nuevo cada semana = costeo histor
 REM 5) Correo HTML del resumen ejecutivo (lee los CSV de arriba; no toca la base de datos)
 powershell -NoProfile -ExecutionPolicy Bypass -File "%BASE%\job\GENERAR_EMAIL.ps1" "%BASE%" || exit /b 1
 
+REM 6) Informe interactivo HTML con graficas + PDF (Chrome/Edge invisible; no toca la base de datos)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%BASE%\job\GENERAR_DASHBOARD.ps1" "%BASE%" || exit /b 1
+
 exit /b 0

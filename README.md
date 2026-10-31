@@ -38,3 +38,14 @@ objetos o datos en SQL Server. Solo se ejecutan SELECT y el resultado se guarda 
 
 ## Tablas de Profit consultadas
 `art`, `st_almac`, `almacen`, `lin_art`, `sub_lin`, `cat_art`, `proceden`, `factura`, `reng_fac`, `dev_cli`, `reng_dvc`
+
+## Informe interactivo (HTML + PDF)
+
+El paso 6 del job ejecuta `job/GENERAR_DASHBOARD.ps1`, que no toca la base de datos:
+
+- Lee `INV_ROTACION_KD.csv` e `INV_VENTAS_DIARIAS_KD.csv` y los inserta en `job/DASHBOARD_TEMPLATE.html`.
+- Escribe `salidas/INV_DASHBOARD_KD.html`: KPIs, lectura automática, ventas por semana/mes/año contra el año anterior, temporada, estados de rotación, desempeño por línea y listas de artículos. Filtro por línea y botón **Descargar PDF**.
+- Imprime el mismo HTML a `salidas/INV_DASHBOARD_KD.pdf` con Chrome o Edge en modo invisible (perfil temporal en `%TEMP%\kd_dashboard`, fuera de la carpeta de Drive).
+- Make adjunta el PDF y el HTML al correo diario junto con el CSV de líneas.
+
+Requisito en el servidor: Google Chrome o Microsoft Edge instalado.
