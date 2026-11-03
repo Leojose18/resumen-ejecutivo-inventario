@@ -142,7 +142,6 @@ td.heat { text-align: right; }
 #t-mix { table-layout: fixed; min-width: 640px; }
 #t-mix th { white-space: normal; vertical-align: bottom; }
 #t-mix th:first-child { width: 150px; }
-.vsel { font-weight: 600; }
 .sub-h { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
 #t-vhist { font-size: 12px; }
 #t-vhist th, #t-vhist td { text-align: right; white-space: nowrap; padding: 7px 8px; }
@@ -283,7 +282,7 @@ td.heat { text-align: right; }
     <div class="vk" id="vd-kpis"></div>
     <ul class="insights" id="vd-ins"></ul>
     <div class="tbl-wrap">
-      <table class="clk" id="t-vend">
+      <table id="t-vend">
         <thead><tr>
           <th class="plain r">Pos.</th><th class="plain">Cambio</th><th class="plain">Vendedor</th>
           <th class="plain r">Venta</th><th class="plain r">% del total</th><th class="plain r">vs anterior</th>
@@ -295,8 +294,8 @@ td.heat { text-align: right; }
     </div>
     <div id="v-hist-wrap">
       <div class="sub-h"><h3 style="margin:0;font-size:14px;font-weight:600">Histórico de los últimos 12 meses</h3></div>
-      <p class="foot" style="margin:4px 0 8px" id="vh-sub">Venta neta de cada vendedor por mes y el puesto que ocupó ese mes (#1 = el que más vendió). <span class="no-print">Toca un vendedor para ver su detalle.</span></p>
-      <div class="tbl-wrap"><table class="clk" id="t-vhist"><thead></thead><tbody></tbody></table></div>
+      <p class="foot" style="margin:4px 0 8px" id="vh-sub">Venta neta de cada vendedor por mes y el puesto que ocupó ese mes (#1 = el que más vendió).</p>
+      <div class="tbl-wrap"><table id="t-vhist"><thead></thead><tbody></tbody></table></div>
     </div>
     <div id="v-mix-wrap">
       <div class="sub-h">
@@ -306,16 +305,15 @@ td.heat { text-align: right; }
           <button type="button" data-vmix="marca">Marca</button>
         </div>
       </div>
-      <p class="foot" style="margin:4px 0 8px">Cada fila suma 100%: qué parte de la venta de cada vendedor viene de cada línea o marca. <span class="heat-k"><i></i> más intenso = mayor peso</span></p>
+      <p class="foot" style="margin:4px 0 8px" id="vm-sub">Últimos 12 meses. Cada fila suma 100%: qué parte de la venta de cada vendedor viene de cada línea o marca. <span class="heat-k"><i></i> más intenso = mayor peso</span></p>
       <div class="tbl-wrap"><table id="t-mix"><thead></thead><tbody></tbody></table></div>
     </div>
     <div class="sub-h">
-      <h3 style="margin:0;font-size:15px;font-weight:600">Detalle: <span id="vd-nom" class="vsel">—</span></h3>
-      <select id="vd-sel" class="sel no-print" aria-label="Elegir vendedor"></select>
+      <h3 style="margin:0;font-size:15px;font-weight:600">Equipo de ventas · últimos 12 meses</h3>
     </div>
     <div class="vdet">
       <div>
-        <h3>Venta y posición, últimos 12 meses</h3>
+        <h3>Venta del equipo por mes</h3>
         <div class="chart" id="ch-vend"></div>
       </div>
       <div>
@@ -327,8 +325,8 @@ td.heat { text-align: right; }
         <div class="hrows" id="vd-mar"></div>
       </div>
       <div class="wide">
-        <h3>Productos más vendidos</h3>
-        <div class="tbl-wrap"><table id="t-vprod"><thead><tr><th class="plain">Producto</th><th class="plain r">Uds</th><th class="plain r">Venta</th><th class="plain r">% de su venta</th><th class="plain r">Margen</th></tr></thead><tbody></tbody></table></div>
+        <h3>Productos más vendidos por el equipo</h3>
+        <div class="tbl-wrap"><table id="t-vprod"><thead><tr><th class="plain">Producto</th><th class="plain r">Uds</th><th class="plain r">Venta</th><th class="plain r">% de la venta</th><th class="plain r">Margen</th></tr></thead><tbody></tbody></table></div>
       </div>
     </div>
   </section>
@@ -703,7 +701,7 @@ td.heat { text-align: right; }
   var VEN = D.vend || [], MAR = D.marcas || [], VART = D.vart || [], VS = D.vs || [];
   var V0 = D.v0 ? pd(D.v0) : H;
   var DESC = {}; ARTS.forEach(function (a) { DESC[a.c] = a.d; });
-  var vstate = { per: 'mes', mix: 'linea', sel: null };
+  var vstate = { per: 'mes', mix: 'linea' };
   try { var vs0 = JSON.parse(localStorage.getItem('kd-vend') || '{}'); if (vs0.per) vstate.per = vs0.per; if (vs0.mix) vstate.mix = vs0.mix; } catch (e) {}
   function off(t) { return Math.round((t - V0) / DAY); }
   function vRange(per) {
@@ -842,64 +840,65 @@ td.heat { text-align: right; }
     if (dep) ins.push({ c: 'warn', k: 'Dependencia de marca', t: 'El ' + pct(dep.p) + ' de la venta de <b>' + esc(vname(dep.r.k)) + '</b> es de ' + esc(MAR[dep.m] || '') + '.' });
     document.getElementById('vd-ins').innerHTML = ins.map(function (o) { return '<li class="' + o.c + '"><div><span class="k">' + o.k + '</span>' + o.t + '</div></li>'; }).join('');
 
-    // mezcla por línea o marca
+    // mezcla por línea o marca: últimos 12 meses
+    var M12 = vMonths();
+    var y12 = HY, m12 = HM - 11; while (m12 < 0) { m12 += 12; y12--; }
+    var ag12 = vAgg(Math.max(Date.UTC(y12, m12, 1), V0), H, true);
+    var rk12 = ranking(ag12), fx12 = fijos(ag12), todos12 = fx12.concat(rk12);
+    var tot12 = sum(todos12, function (r) { return r.v; });
     var dim = vstate.mix === 'marca' ? 'mar' : 'lin', NAMES = dim === 'mar' ? MAR : LIN;
     document.getElementById('vm-h').textContent = 'Mezcla de venta por ' + (dim === 'mar' ? 'marca' : 'línea');
-    var colTot = {}; todos.forEach(function (r) { Object.keys(r.x[dim]).forEach(function (k) { colTot[k] = (colTot[k] || 0) + r.x[dim][k]; }); });
+    var colTot = {}; todos12.forEach(function (r) { Object.keys(r.x[dim]).forEach(function (k) { colTot[k] = (colTot[k] || 0) + r.x[dim][k]; }); });
     var cols = Object.keys(colTot).sort(function (p, q) { return colTot[q] - colTot[p]; }).slice(0, 6).map(Number);
-    var rowsMix = fx.concat(rk.slice(0, 12));
+    var rowsMix = fx12.concat(rk12.slice(0, 15));
     function cell(val, base) {
       var p = base > 0 ? val / base : 0, al = Math.max(0, Math.min(1, p)) * 0.85;
       return '<td class="heat" style="background:rgba(8,103,136,' + (p > 0 ? (0.06 + al).toFixed(2) : 0) + ');color:' + (al > 0.45 ? '#fff' : 'inherit') + '">' + (p > 0.0005 ? nf1.format(p * 100) + '%' : '·') + '</td>';
     }
     document.querySelector('#t-mix thead').innerHTML = '<tr><th class="plain">Vendedor</th>' + cols.map(function (c) { return '<th class="plain r">' + esc(NAMES[c] || '') + '</th>'; }).join('') + '<th class="plain r">Otras</th></tr>';
-    var empresa = '<tr style="font-weight:600"><td>Total equipo</td>' + cols.map(function (c) { return cell(colTot[c], tot); }).join('') + cell(tot - sum(cols, function (c) { return colTot[c]; }), tot) + '</tr>';
+    var empresa = '<tr style="font-weight:600"><td>Total equipo</td>' + cols.map(function (c) { return cell(colTot[c], tot12); }).join('') + cell(tot12 - sum(cols, function (c) { return colTot[c]; }), tot12) + '</tr>';
     document.querySelector('#t-mix tbody').innerHTML = empresa + rowsMix.map(function (r) {
       var used = sum(cols, function (c) { return r.x[dim][c] || 0; });
       return '<tr><td>' + esc(vname(r.k)) + '</td>' + cols.map(function (c) { return cell(r.x[dim][c] || 0, r.v); }).join('') + cell(r.v - used, r.v) + '</tr>';
     }).join('');
 
-    // selector y detalle
-    if (vstate.sel == null || !cur[vstate.sel]) vstate.sel = lider ? lider.k : null;
-    var sel = document.getElementById('vd-sel');
-    sel.innerHTML = todos.map(function (r) { return '<option value="' + r.k + '">' + (esFijo(r.k) ? 0 : rk.indexOf(r) + 1) + '. ' + esc(vname(r.k)) + '</option>'; }).join('');
-    if (vstate.sel != null) sel.value = String(vstate.sel);
-    var M12 = vMonths();
     drawHist(M12);
-    drawVendDet(cur, tot, M12);
+    drawEquipo(todos12, tot12, M12);
   }
 
-  function drawVendDet(cur, tot, M12) {
-    var k = vstate.sel, x = k != null ? cur[k] : null;
-    document.getElementById('vd-nom').textContent = k != null ? vname(k) : '—';
-    if (!x) { ['vd-lin', 'vd-mar', 'ch-vend'].forEach(function (id) { document.getElementById(id).innerHTML = ''; }); document.querySelector('#t-vprod tbody').innerHTML = ''; return; }
+  // información general del equipo (últimos 12 meses)
+  function drawEquipo(todos12, tot12, M12) {
+    var lin = {}, mar = {}, art = {};
+    todos12.forEach(function (r) {
+      Object.keys(r.x.lin).forEach(function (k) { lin[k] = (lin[k] || 0) + r.x.lin[k]; });
+      Object.keys(r.x.mar).forEach(function (k) { mar[k] = (mar[k] || 0) + r.x.mar[k]; });
+      Object.keys(r.x.art).forEach(function (k) { var a = r.x.art[k], t = art[k] || (art[k] = [0, 0, 0]); t[0] += a[0]; t[1] += a[1]; t[2] += a[2]; });
+    });
     function hbars(obj, names, col) {
       var ks = Object.keys(obj).map(Number).filter(function (i) { return obj[i] > 0; }).sort(function (p, q) { return obj[q] - obj[p]; }).slice(0, 8);
       var mx = ks.length ? obj[ks[0]] : 1;
-      return ks.map(function (i) { return '<div class="hrow"><span class="nm">' + esc(names[i] || '') + '</span><div class="bars"><div class="bar" style="width:' + (obj[i] / mx * 100).toFixed(1) + '%;background:' + col + '"></div><span class="vv"><b>' + usdc(obj[i]) + '</b> · ' + pct(obj[i] / x.v) + ' de su venta</span></div></div>'; }).join('') || '<p class="foot">Sin ventas.</p>';
+      return ks.map(function (i) { return '<div class="hrow"><span class="nm">' + esc(names[i] || '') + '</span><div class="bars"><div class="bar" style="width:' + (obj[i] / mx * 100).toFixed(1) + '%;background:' + col + '"></div><span class="vv"><b>' + usdc(obj[i]) + '</b> · ' + pct(tot12 ? obj[i] / tot12 : null) + ' de la venta</span></div></div>'; }).join('') || '<p class="foot">Sin ventas.</p>';
     }
-    document.getElementById('vd-lin').innerHTML = hbars(x.lin, LIN, '#086788');
-    document.getElementById('vd-mar').innerHTML = hbars(x.mar, MAR, '#06AED5');
-    var prods = Object.keys(x.art).map(Number).sort(function (p, q) { return x.art[q][1] - x.art[p][1]; }).slice(0, 10);
+    document.getElementById('vd-lin').innerHTML = hbars(lin, LIN, '#086788');
+    document.getElementById('vd-mar').innerHTML = hbars(mar, MAR, '#06AED5');
+    var prods = Object.keys(art).map(Number).sort(function (p, q) { return art[q][1] - art[p][1]; }).slice(0, 10);
     document.querySelector('#t-vprod tbody').innerHTML = prods.map(function (i) {
-      var a = x.art[i], co = VART[i] || '', mg = a[1] > 0 ? (a[1] - a[2]) / a[1] : null;
-      return '<tr><td class="desc">' + esc(DESC[co] || co) + '<small>' + esc(co) + '</small></td><td class="r">' + int(a[0]) + '</td><td class="r">' + usd(a[1]) + '</td><td class="r">' + pct(x.v ? a[1] / x.v : null) + '</td><td class="r' + (mg != null && mg < 0 ? ' neg' : '') + '">' + pct(mg) + '</td></tr>';
+      var a = art[i], co = VART[i] || '', mg = a[1] > 0 ? (a[1] - a[2]) / a[1] : null;
+      return '<tr><td class="desc">' + esc(DESC[co] || co) + '<small>' + esc(co) + '</small></td><td class="r">' + int(a[0]) + '</td><td class="r">' + usd(a[1]) + '</td><td class="r">' + pct(tot12 ? a[1] / tot12 : null) + '</td><td class="r' + (mg != null && mg < 0 ? ' neg' : '') + '">' + pct(mg) + '</td></tr>';
     }).join('') || '<tr><td colspan="5" style="color:var(--tinta-3)">Sin productos.</td></tr>';
 
-    // 12 meses: venta del vendedor y su posición cada mes
-    var meses = M12.map(function (mo) { return { l: mo.l, v: mo.ag[k] ? mo.ag[k].v : 0, pos: mo.pos[k] == null ? null : mo.pos[k], n: mo.n, sh: mo.ag[k] && mo.tot ? mo.ag[k].v / mo.tot : 0 }; });
+    // venta del equipo por mes
     var el = document.getElementById('ch-vend');
     var W = widthOf(el), Hh = 230, ml = 54, mr = 10, mt = 22, mb = 26, iw = W - ml - mr, ih = Hh - mt - mb;
-    var mx = niceMax(Math.max.apply(null, meses.map(function (q) { return q.v; }).concat([1])));
-    var bw = iw / Math.max(meses.length, 1), bar = Math.min(30, bw * 0.6), s = '';
+    var mx = niceMax(Math.max.apply(null, M12.map(function (q) { return q.tot; }).concat([1])));
+    var bw = iw / Math.max(M12.length, 1), bar = Math.min(30, bw * 0.6), s = '';
     for (var g = 0; g <= 4; g++) { var gy = mt + ih - ih * g / 4; s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + gy + '" y2="' + gy + '" stroke="#e7ecef"/><text x="' + (ml - 8) + '" y="' + (gy + 4) + '" text-anchor="end">' + usdc(mx * g / 4) + '</text>'; }
-    meses.forEach(function (q, j) {
-      var cx = ml + bw * j + bw / 2, h = q.v / mx * ih;
-      s += '<rect x="' + (cx - bar / 2) + '" y="' + (mt + ih - h) + '" width="' + bar + '" height="' + Math.max(0, h) + '" rx="2" fill="' + (q.pos === 1 ? '#ED0023' : '#086788') + '"><title>' + q.l + ': ' + usd(q.v) + (q.pos != null ? ' · ' + (q.pos ? 'puesto ' + q.pos + ' de ' + q.n : 'fuera del ranking (posición 0)') + ' · ' + pct(q.sh) + ' del total' : '') + '</title></rect>';
-      if (q.pos != null) s += '<text x="' + cx + '" y="' + (mt + ih - h - 6) + '" text-anchor="middle" style="fill:var(--tinta);font-weight:600">#' + q.pos + '</text>';
-      if (W > 520 || j % 2 === 0) s += '<text x="' + cx + '" y="' + (Hh - 8) + '" text-anchor="middle">' + q.l + '</text>';
+    M12.forEach(function (q, j) {
+      var cx = ml + bw * j + bw / 2, h = q.tot / mx * ih;
+      s += '<rect x="' + (cx - bar / 2) + '" y="' + (mt + ih - h) + '" width="' + bar + '" height="' + Math.max(0, h) + '" rx="2" fill="#086788"><title>' + q.l + (q.cur ? ' (en curso)' : '') + ': ' + usd(q.tot) + '</title></rect>';
+      if (W > 520 || j % 2 === 0) s += '<text x="' + cx + '" y="' + (Hh - 8) + '" text-anchor="middle">' + q.l + (q.cur ? '*' : '') + '</text>';
     });
-    el.innerHTML = svgEl(W, Hh, s) + '<p class="foot" style="margin:6px 0 0">#n = puesto en el ranking de ese mes. En rojo, los meses en que fue el número 1.</p>';
+    el.innerHTML = svgEl(W, Hh, s) + '<p class="foot" style="margin:6px 0 0">Venta neta de todo el equipo, incluida VENTAS MAYORES. * mes en curso al día ' + HD + '.</p>';
   }
 
   // ---------- render ----------
@@ -949,11 +948,6 @@ td.heat { text-align: right; }
   document.querySelectorAll('[data-vmix]').forEach(function (b) {
     b.addEventListener('click', function () { vstate.mix = b.getAttribute('data-vmix'); try { localStorage.setItem('kd-vend', JSON.stringify({ per: vstate.per, mix: vstate.mix })); } catch (e) {} drawVend(); });
   });
-  document.getElementById('vd-sel').addEventListener('change', function (e) { vstate.sel = +e.target.value; drawVend(); });
-  function pickVend(ev) { var t = ev.target.closest('[data-v]'); if (!t) return; vstate.sel = +t.getAttribute('data-v'); drawVend(); document.getElementById('vd-nom').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  document.querySelector('#t-vend tbody').addEventListener('click', pickVend);
-  document.querySelector('#t-vhist tbody').addEventListener('click', pickVend);
-  document.querySelector('#t-vend tbody').addEventListener('keydown', function (e) { if (e.key === 'Enter') pickVend(e); });
   var qi = document.getElementById('q');
   qi.addEventListener('input', function () { state.q = qi.value; drawListas(arts()); });
   document.getElementById('b-pdf').addEventListener('click', function () { window.print(); });
