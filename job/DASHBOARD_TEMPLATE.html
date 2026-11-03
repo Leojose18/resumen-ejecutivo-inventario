@@ -144,6 +144,19 @@ td.heat { text-align: right; }
 #t-mix th:first-child { width: 150px; }
 .vsel { font-weight: 600; }
 .sub-h { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
+#t-vhist { font-size: 12px; }
+#t-vhist th, #t-vhist td { text-align: right; white-space: nowrap; padding: 7px 8px; }
+#t-vhist th:first-child, #t-vhist td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 2; }
+#t-vhist thead th:first-child { background: #f7f9fa; z-index: 3; }
+#t-vhist td .p { display: block; font-weight: 600; font-size: 11px; color: var(--tinta-2); }
+#t-vhist td.p1 { background: #fdecef; } #t-vhist td.p1 .p { color: var(--rojo); }
+#t-vhist td.p2, #t-vhist td.p3 { background: #e9f4f8; } #t-vhist td.p2 .p, #t-vhist td.p3 .p { color: var(--azul); }
+#t-vhist tr.tot td { font-weight: 600; background: #f7f9fa; }
+#t-vhist td.sum { border-left: 1px solid var(--linea); }
+#t-vhist tr.sel td { background: #f5f9fb !important; }
+#t-vhist tr.sel td.p1 { background: #fdecef !important; }
+#t-vhist tr.sel td.p2, #t-vhist tr.sel td.p3 { background: #e9f4f8 !important; }
+#t-vhist tr.sel td:first-child { font-weight: 600; box-shadow: inset 3px 0 0 var(--azul); }
 @media (max-width: 640px) { .hide-sm { display: none; } .kpi .v { font-size: 20px; } }
 
 @page { size: A4; margin: 11mm; }
@@ -158,6 +171,10 @@ td.heat { text-align: right; }
   .card { break-inside: auto; }
   #ventas, #temporada, #estados, #lectura { break-inside: avoid; }
   .vdet > div { break-inside: avoid; }
+  #t-vhist { font-size: 8.5px; }
+  #t-vhist th, #t-vhist td { padding: 4px 3px; }
+  #t-vhist td .p { font-size: 8px; }
+  #t-vhist th:first-child, #t-vhist td:first-child { position: static; }
   .vdet .wide { break-inside: auto; }
   .panel tbody tr:nth-child(n+11) { display: none; }
   .desc { min-width: 0; }
@@ -278,6 +295,11 @@ td.heat { text-align: right; }
         </tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+    <div id="v-hist-wrap">
+      <div class="sub-h"><h3 style="margin:0;font-size:14px;font-weight:600">Histórico de los últimos 12 meses</h3></div>
+      <p class="foot" style="margin:4px 0 8px" id="vh-sub">Venta neta de cada vendedor por mes y el puesto que ocupó ese mes (#1 = el que más vendió). <span class="no-print">Toca un vendedor para ver su detalle.</span></p>
+      <div class="tbl-wrap"><table class="clk" id="t-vhist"><thead></thead><tbody></tbody></table></div>
     </div>
     <div id="v-mix-wrap">
       <div class="sub-h">
@@ -720,6 +742,38 @@ td.heat { text-align: right; }
   function topKey(obj) { var best = null, bv = -Infinity; Object.keys(obj).forEach(function (k) { if (obj[k] > bv) { bv = obj[k]; best = +k; } }); return best; }
   function vname(i) { var v = VEN[i]; return v ? (v[1] || v[0] || 'Sin vendedor') : 'Sin vendedor'; }
 
+  // venta por vendedor y puesto en cada uno de los últimos 12 meses
+  function vMonths() {
+    var out = [];
+    for (var i = 11; i >= 0; i--) {
+      var y = HY, m = HM - i; while (m < 0) { m += 12; y--; }
+      var a = Date.UTC(y, m, 1), b = Math.min(Date.UTC(y, m + 1, 0), H);
+      if (b < V0) continue;
+      var ag = vAgg(Math.max(a, V0), b, false), rr = ranking(ag), pos = {};
+      rr.forEach(function (r, j) { pos[r.k] = j + 1; });
+      out.push({ l: MES[m] + ' ' + String(y).slice(2), cur: i === 0, ag: ag, n: rr.length, pos: pos, tot: sum(rr, function (r) { return r.v; }) });
+    }
+    return out;
+  }
+
+  function drawHist(M12) {
+    var tot12 = {};
+    M12.forEach(function (mo) { Object.keys(mo.ag).forEach(function (k) { tot12[k] = (tot12[k] || 0) + mo.ag[k].v; }); });
+    var keys = Object.keys(tot12).map(Number).filter(function (k) { return tot12[k] > 0.5; }).sort(function (p, q) { return tot12[q] - tot12[p]; });
+    var gran = sum(keys, function (k) { return tot12[k]; });
+    document.querySelector('#t-vhist thead').innerHTML = '<tr><th class="plain">Vendedor</th>' + M12.map(function (mo) { return '<th class="plain">' + mo.l + (mo.cur ? '*' : '') + '</th>'; }).join('') + '<th class="plain">Total 12 m</th><th class="plain">Puesto 12 m</th></tr>';
+    var body = keys.map(function (k, idx) {
+      return '<tr data-v="' + k + '" tabindex="0"' + (k === vstate.sel ? ' class="sel"' : '') + '><td>' + esc(vname(k)) + '</td>' + M12.map(function (mo) {
+        var x = mo.ag[k], p = mo.pos[k];
+        if (!x || !p) return '<td style="color:var(--tinta-3)">—</td>';
+        return '<td class="' + (p <= 3 ? 'p' + p : '') + '" title="' + esc(vname(k)) + ' · ' + mo.l + ': ' + usd(x.v) + ' · puesto ' + p + ' de ' + mo.n + ' · ' + pct(mo.tot ? x.v / mo.tot : null) + ' del total"><span class="p">#' + p + '</span>' + usdc(x.v) + '</td>';
+      }).join('') + '<td class="sum"><b>' + usdc(tot12[k]) + '</b><span class="p" style="font-weight:500">' + pct(gran ? tot12[k] / gran : null) + '</span></td><td class="' + (idx < 3 ? 'p' + (idx + 1) : '') + '"><span class="p">#' + (idx + 1) + '</span></td></tr>';
+    }).join('');
+    var totRow = '<tr class="tot"><td>Total equipo</td>' + M12.map(function (mo) { return '<td>' + usdc(mo.tot) + '</td>'; }).join('') + '<td class="sum">' + usdc(gran) + '</td><td></td></tr>';
+    document.querySelector('#t-vhist tbody').innerHTML = keys.length ? body + totRow : '<tr><td colspan="15" style="color:var(--tinta-3)">Sin ventas en los últimos 12 meses.</td></tr>';
+    document.getElementById('vh-sub').firstChild.textContent = 'Venta neta de cada vendedor por mes y el puesto que ocupó ese mes (#1 = el que más vendió)' + (state.li >= 0 ? ', línea ' + LIN[state.li] : '') + '. * mes en curso al día ' + HD + '. ';
+  }
+
   function drawVend() {
     var card = document.getElementById('vendedores');
     if (!VS.length) { card.hidden = true; return; }
@@ -802,13 +856,15 @@ td.heat { text-align: right; }
     var sel = document.getElementById('vd-sel');
     sel.innerHTML = rk.map(function (r, i) { return '<option value="' + r.k + '">' + (i + 1) + '. ' + esc(vname(r.k)) + '</option>'; }).join('');
     if (vstate.sel != null) sel.value = String(vstate.sel);
-    drawVendDet(cur, tot);
+    var M12 = vMonths();
+    drawHist(M12);
+    drawVendDet(cur, tot, M12);
   }
 
-  function drawVendDet(cur, tot) {
+  function drawVendDet(cur, tot, M12) {
     var k = vstate.sel, x = k != null ? cur[k] : null;
     document.getElementById('vd-nom').textContent = k != null ? vname(k) : '—';
-    document.querySelectorAll('#t-vend tbody tr').forEach(function (tr) { tr.classList.toggle('sel', +tr.getAttribute('data-v') === k); });
+    document.querySelectorAll('#t-vend tbody tr, #t-vhist tbody tr[data-v]').forEach(function (tr) { tr.classList.toggle('sel', +tr.getAttribute('data-v') === k); });
     if (!x) { ['vd-lin', 'vd-mar', 'ch-vend'].forEach(function (id) { document.getElementById(id).innerHTML = ''; }); document.querySelector('#t-vprod tbody').innerHTML = ''; return; }
     function hbars(obj, names, col) {
       var ks = Object.keys(obj).map(Number).filter(function (i) { return obj[i] > 0; }).sort(function (p, q) { return obj[q] - obj[p]; }).slice(0, 8);
@@ -824,15 +880,7 @@ td.heat { text-align: right; }
     }).join('') || '<tr><td colspan="5" style="color:var(--tinta-3)">Sin productos.</td></tr>';
 
     // 12 meses: venta del vendedor y su posición cada mes
-    var meses = [];
-    for (var i = 11; i >= 0; i--) {
-      var y = HY, m = HM - i; while (m < 0) { m += 12; y--; }
-      var a = Date.UTC(y, m, 1), b = Math.min(Date.UTC(y, m + 1, 0), H);
-      if (b < V0) continue;
-      var ag = vAgg(Math.max(a, V0), b, false), rr = ranking(ag), pos = null;
-      rr.forEach(function (r, j) { if (r.k === k) pos = j + 1; });
-      meses.push({ l: MES[m] + ' ' + String(y).slice(2), v: ag[k] ? ag[k].v : 0, pos: pos, n: rr.length, sh: ag[k] ? ag[k].v / sum(rr, function (r) { return r.v; }) : 0 });
-    }
+    var meses = M12.map(function (mo) { return { l: mo.l, v: mo.ag[k] ? mo.ag[k].v : 0, pos: mo.pos[k] || null, n: mo.n, sh: mo.ag[k] && mo.tot ? mo.ag[k].v / mo.tot : 0 }; });
     var el = document.getElementById('ch-vend');
     var W = widthOf(el), Hh = 230, ml = 54, mr = 10, mt = 22, mb = 26, iw = W - ml - mr, ih = Hh - mt - mb;
     var mx = niceMax(Math.max.apply(null, meses.map(function (q) { return q.v; }).concat([1])));
@@ -897,6 +945,7 @@ td.heat { text-align: right; }
   document.getElementById('vd-sel').addEventListener('change', function (e) { vstate.sel = +e.target.value; drawVend(); });
   function pickVend(ev) { var t = ev.target.closest('[data-v]'); if (!t) return; vstate.sel = +t.getAttribute('data-v'); drawVend(); document.getElementById('vd-nom').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   document.querySelector('#t-vend tbody').addEventListener('click', pickVend);
+  document.querySelector('#t-vhist tbody').addEventListener('click', pickVend);
   document.querySelector('#t-vend tbody').addEventListener('keydown', function (e) { if (e.key === 'Enter') pickVend(e); });
   var qi = document.getElementById('q');
   qi.addEventListener('input', function () { state.q = qi.value; drawListas(arts()); });
