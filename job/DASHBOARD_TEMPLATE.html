@@ -111,7 +111,7 @@ td { padding: 8px 10px; border-bottom: 1px solid var(--linea); vertical-align: t
 tbody tr:last-child td { border-bottom: 0; }
 .clk tbody tr { cursor: pointer; }
 .clk tbody tr:hover td { background: #f5f9fb; }
-tr.sel td { background: #e9f4f8 !important; }
+tr.on td { background: #e9f4f8 !important; }
 .desc { min-width: 220px; }
 .desc small { display: block; color: var(--tinta-3); font-size: 11px; }
 .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--linea); color: var(--tinta-2); }
@@ -153,10 +153,7 @@ td.heat { text-align: right; }
 #t-vhist td.p2, #t-vhist td.p3 { background: #e9f4f8; } #t-vhist td.p2 .p, #t-vhist td.p3 .p { color: var(--azul); }
 #t-vhist tr.tot td { font-weight: 600; background: #f7f9fa; }
 #t-vhist td.sum { border-left: 1px solid var(--linea); }
-#t-vhist tr.sel td { background: #f5f9fb !important; }
-#t-vhist tr.sel td.p1 { background: #fdecef !important; }
-#t-vhist tr.sel td.p2, #t-vhist tr.sel td.p3 { background: #e9f4f8 !important; }
-#t-vhist tr.sel td:first-child { font-weight: 600; box-shadow: inset 3px 0 0 var(--azul); }
+#t-vhist tr.fijo td .p { color: var(--tinta-3); }
 @media (max-width: 640px) { .hide-sm { display: none; } .kpi .v { font-size: 20px; } }
 
 @page { size: A4; margin: 11mm; }
@@ -628,7 +625,7 @@ td.heat { text-align: right; }
       return d * ((x == null ? -Infinity : x) - (y == null ? -Infinity : y));
     });
     document.querySelector('#t-lineas tbody').innerHTML = rows.map(function (r) {
-      return '<tr data-li="' + r.i + '" tabindex="0"' + (r.i === state.li ? ' class="sel"' : '') + '><td>' + esc(r.linea) + '</td><td class="r">' + usd(r.valor) + '</td><td class="r">' + usd(r.venta) + '</td><td class="r">' + pct(r.margen) + '</td><td class="r">' + (r.rot == null ? '—' : r.rot.toFixed(2)) + '</td><td class="r hide-sm">' + usd(r.baja) + '</td><td class="r hide-sm">' + usd(r.sinmov) + '</td><td class="r">' + int(r.agot) + '</td></tr>';
+      return '<tr data-li="' + r.i + '" tabindex="0"' + (r.i === state.li ? ' class="on"' : '') + '><td>' + esc(r.linea) + '</td><td class="r">' + usd(r.valor) + '</td><td class="r">' + usd(r.venta) + '</td><td class="r">' + pct(r.margen) + '</td><td class="r">' + (r.rot == null ? '—' : r.rot.toFixed(2)) + '</td><td class="r hide-sm">' + usd(r.baja) + '</td><td class="r hide-sm">' + usd(r.sinmov) + '</td><td class="r">' + int(r.agot) + '</td></tr>';
     }).join('');
     document.querySelectorAll('#t-lineas th').forEach(function (th) {
       var b = th.querySelector('button'); if (!b) return;
@@ -734,11 +731,17 @@ td.heat { text-align: right; }
     }
     return m;
   }
-  function ranking(m) {
+  // Vendedores que no compiten en el ranking: siempre salen con posición 0
+  var FIJOS = ['VENTAS MAYORES'];
+  function norm(t) { return String(t || '').toUpperCase().replace(/\s+/g, ' ').trim(); }
+  function esFijo(k) { var v = VEN[k]; return !!v && (FIJOS.indexOf(norm(v[1])) >= 0 || FIJOS.indexOf(norm(v[0])) >= 0); }
+  function allRows(m) {
     return Object.keys(m).map(function (k) { return { k: +k, v: m[k].v, x: m[k] }; })
       .filter(function (r) { return r.v > 0.5; })
       .sort(function (p, q) { return q.v - p.v; });
   }
+  function ranking(m) { return allRows(m).filter(function (r) { return !esFijo(r.k); }); }
+  function fijos(m) { return allRows(m).filter(function (r) { return esFijo(r.k); }); }
   function topKey(obj) { var best = null, bv = -Infinity; Object.keys(obj).forEach(function (k) { if (obj[k] > bv) { bv = obj[k]; best = +k; } }); return best; }
   function vname(i) { var v = VEN[i]; return v ? (v[1] || v[0] || 'Sin vendedor') : 'Sin vendedor'; }
 
@@ -749,9 +752,10 @@ td.heat { text-align: right; }
       var y = HY, m = HM - i; while (m < 0) { m += 12; y--; }
       var a = Date.UTC(y, m, 1), b = Math.min(Date.UTC(y, m + 1, 0), H);
       if (b < V0) continue;
-      var ag = vAgg(Math.max(a, V0), b, false), rr = ranking(ag), pos = {};
+      var ag = vAgg(Math.max(a, V0), b, false), rr = ranking(ag), ff = fijos(ag), pos = {};
       rr.forEach(function (r, j) { pos[r.k] = j + 1; });
-      out.push({ l: MES[m] + ' ' + String(y).slice(2), cur: i === 0, ag: ag, n: rr.length, pos: pos, tot: sum(rr, function (r) { return r.v; }) });
+      ff.forEach(function (r) { pos[r.k] = 0; });
+      out.push({ l: MES[m] + ' ' + String(y).slice(2), cur: i === 0, ag: ag, n: rr.length, pos: pos, tot: sum(rr, function (r) { return r.v; }) + sum(ff, function (r) { return r.v; }) });
     }
     return out;
   }
@@ -759,15 +763,17 @@ td.heat { text-align: right; }
   function drawHist(M12) {
     var tot12 = {};
     M12.forEach(function (mo) { Object.keys(mo.ag).forEach(function (k) { tot12[k] = (tot12[k] || 0) + mo.ag[k].v; }); });
-    var keys = Object.keys(tot12).map(Number).filter(function (k) { return tot12[k] > 0.5; }).sort(function (p, q) { return tot12[q] - tot12[p]; });
-    var gran = sum(keys, function (k) { return tot12[k]; });
+    var todos = Object.keys(tot12).map(Number).filter(function (k) { return tot12[k] > 0.5; }).sort(function (p, q) { return tot12[q] - tot12[p]; });
+    var keys = todos.filter(function (k) { return esFijo(k); }).concat(todos.filter(function (k) { return !esFijo(k); }));
+    var gran = sum(keys, function (k) { return tot12[k]; }), rank12 = 0;
     document.querySelector('#t-vhist thead').innerHTML = '<tr><th class="plain">Vendedor</th>' + M12.map(function (mo) { return '<th class="plain">' + mo.l + (mo.cur ? '*' : '') + '</th>'; }).join('') + '<th class="plain">Total 12 m</th><th class="plain">Puesto 12 m</th></tr>';
-    var body = keys.map(function (k, idx) {
-      return '<tr data-v="' + k + '" tabindex="0"' + (k === vstate.sel ? ' class="sel"' : '') + '><td>' + esc(vname(k)) + '</td>' + M12.map(function (mo) {
+    var body = keys.map(function (k) {
+      var fijo = esFijo(k), pz = fijo ? 0 : ++rank12;
+      return '<tr data-v="' + k + '" tabindex="0"' + (fijo ? ' class="fijo"' : '') + '><td>' + esc(vname(k)) + '</td>' + M12.map(function (mo) {
         var x = mo.ag[k], p = mo.pos[k];
-        if (!x || !p) return '<td style="color:var(--tinta-3)">—</td>';
-        return '<td class="' + (p <= 3 ? 'p' + p : '') + '" title="' + esc(vname(k)) + ' · ' + mo.l + ': ' + usd(x.v) + ' · puesto ' + p + ' de ' + mo.n + ' · ' + pct(mo.tot ? x.v / mo.tot : null) + ' del total"><span class="p">#' + p + '</span>' + usdc(x.v) + '</td>';
-      }).join('') + '<td class="sum"><b>' + usdc(tot12[k]) + '</b><span class="p" style="font-weight:500">' + pct(gran ? tot12[k] / gran : null) + '</span></td><td class="' + (idx < 3 ? 'p' + (idx + 1) : '') + '"><span class="p">#' + (idx + 1) + '</span></td></tr>';
+        if (!x || p == null) return '<td style="color:var(--tinta-3)">—</td>';
+        return '<td class="' + (p >= 1 && p <= 3 ? 'p' + p : '') + '" title="' + esc(vname(k)) + ' · ' + mo.l + ': ' + usd(x.v) + ' · ' + (p ? 'puesto ' + p + ' de ' + mo.n : 'fuera del ranking (posición 0)') + ' · ' + pct(mo.tot ? x.v / mo.tot : null) + ' del total"><span class="p">#' + p + '</span>' + usdc(x.v) + '</td>';
+      }).join('') + '<td class="sum"><b>' + usdc(tot12[k]) + '</b><span class="p" style="font-weight:500">' + pct(gran ? tot12[k] / gran : null) + '</span></td><td class="' + (pz >= 1 && pz <= 3 ? 'p' + pz : '') + '"><span class="p">#' + pz + '</span></td></tr>';
     }).join('');
     var totRow = '<tr class="tot"><td>Total equipo</td>' + M12.map(function (mo) { return '<td>' + usdc(mo.tot) + '</td>'; }).join('') + '<td class="sum">' + usdc(gran) + '</td><td></td></tr>';
     document.querySelector('#t-vhist tbody').innerHTML = keys.length ? body + totRow : '<tr><td colspan="15" style="color:var(--tinta-3)">Sin ventas en los últimos 12 meses.</td></tr>';
@@ -782,10 +788,11 @@ td.heat { text-align: right; }
     document.querySelectorAll('[data-vmix]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-vmix') === vstate.mix)); });
     var R = vRange(vstate.per);
     var cur = vAgg(R.a, R.b, true), prev = R.prevOk ? vAgg(R.pa, R.pb, false) : {};
-    var rk = ranking(cur), rkp = ranking(prev);
+    var rk = ranking(cur), rkp = ranking(prev), fx = fijos(cur), fxp = fijos(prev);
     var posPrev = {}; rkp.forEach(function (r, i) { posPrev[r.k] = i + 1; });
-    var tot = sum(rk, function (r) { return r.v; }), totPrev = sum(rkp, function (r) { return r.v; });
-    var totC = sum(rk, function (r) { return r.x.c; });
+    var todos = fx.concat(rk);
+    var tot = sum(todos, function (r) { return r.v; }), totPrev = sum(rkp.concat(fxp), function (r) { return r.v; });
+    var totC = sum(todos, function (r) { return r.x.c; });
     document.getElementById('vd-sub').textContent = 'Venta neta en $ por vendedor, ' + R.nom + (state.li >= 0 ? ', línea ' + LIN[state.li] : '') + '. Posición y variación frente a ' + R.pnom + '.';
 
     // KPIs
@@ -793,15 +800,16 @@ td.heat { text-align: right; }
     var lider = rk[0];
     document.getElementById('vd-kpis').innerHTML =
       '<div class="cmp-i"><span class="l">Venta del equipo</span><span class="v">' + usdc(tot) + '</span><span class="d"><span>vs ' + esc(R.pnom) + ' ' + delta(tot, R.prevOk ? totPrev : null) + '</span></span></div>' +
-      '<div class="cmp-i"><span class="l">Vendedores con venta</span><span class="v">' + int(rk.length) + '</span><span class="d"><span>margen del equipo ' + pct(tot > 0 ? (tot - totC) / tot : null) + '</span></span></div>' +
+      '<div class="cmp-i"><span class="l">Vendedores en el ranking</span><span class="v">' + int(rk.length) + '</span><span class="d"><span>margen del equipo ' + pct(tot > 0 ? (tot - totC) / tot : null) + '</span></span></div>' +
       '<div class="cmp-i"><span class="l">Líder del período</span><span class="v" style="font-size:16px">' + (lider ? esc(vname(lider.k)) : '—') + '</span><span class="d"><span>' + (lider ? usd(lider.v) + ' · ' + pct(tot ? lider.v / tot : null) + ' del total' : '') + '</span></span></div>' +
       '<div class="cmp-i"><span class="l">Concentración top 3</span><span class="v">' + pct(tot ? top3 / tot : null) + '</span><span class="d"><span>de la venta la hacen 3 vendedores</span></span></div>';
 
     // ranking
-    var maxV = rk.length ? rk[0].v : 1;
-    document.querySelector('#t-vend tbody').innerHTML = rk.length ? rk.map(function (r, i) {
-      var pos = i + 1, pp = posPrev[r.k], ch;
-      if (!R.prevOk) ch = '<span class="rk eq">—</span>';
+    var maxV = Math.max.apply(null, todos.map(function (r) { return r.v; }).concat([1]));
+    document.querySelector('#t-vend tbody').innerHTML = todos.length ? todos.map(function (r) {
+      var fijo = esFijo(r.k), pos = fijo ? 0 : rk.indexOf(r) + 1, pp = posPrev[r.k], ch;
+      if (fijo) ch = '<span class="rk eq">—</span>';
+      else if (!R.prevOk) ch = '<span class="rk eq">—</span>';
       else if (!pp) ch = '<span class="rk new">nuevo</span>';
       else if (pp > pos) ch = '<span class="rk up">▲ ' + (pp - pos) + '</span>';
       else if (pp < pos) ch = '<span class="rk down">▼ ' + (pos - pp) + '</span>';
@@ -809,8 +817,8 @@ td.heat { text-align: right; }
       var pv = prev[r.k] ? prev[r.k].v : null;
       var tl = topKey(r.x.lin), tm = topKey(r.x.mar);
       var mg = r.v > 0 ? (r.v - r.x.c) / r.v : null;
-      return '<tr data-v="' + r.k + '" tabindex="0"' + (r.k === vstate.sel ? ' class="sel"' : '') + '><td class="r"><b>' + pos + '</b></td><td>' + ch + '</td><td>' + esc(vname(r.k)) + '</td><td class="r">' + usd(r.v) + '</td>' +
-        '<td class="r"><span class="share"><i style="width:' + Math.round(r.v / maxV * 60) + 'px"></i>' + pct(tot ? r.v / tot : null) + '</span></td>' +
+      return '<tr data-v="' + r.k + '" tabindex="0"' + '' + '><td class="r"><b>' + pos + '</b></td><td>' + ch + '</td><td>' + esc(vname(r.k)) + '</td><td class="r">' + usd(r.v) + '</td>' +
+        '<td class="r"><span class="share"><i style="width:' + Math.round(Math.min(1, r.v / maxV) * 60) + 'px"></i>' + pct(tot ? r.v / tot : null) + '</span></td>' +
         '<td class="r">' + (R.prevOk ? delta(r.v, pv) : '—') + '</td><td class="r' + (mg != null && mg < 0 ? ' neg' : '') + '">' + pct(mg) + '</td><td class="r hide-sm">' + int(r.x.u) + '</td>' +
         '<td class="hide-sm">' + (tl == null ? '—' : esc(LIN[tl] || '') + ' <small style="color:var(--tinta-3)">' + pct(r.x.lin[tl] / r.v) + '</small>') + '</td>' +
         '<td class="hide-sm">' + (tm == null ? '—' : esc(MAR[tm] || '') + ' <small style="color:var(--tinta-3)">' + pct(r.x.mar[tm] / r.v) + '</small>') + '</td></tr>';
@@ -837,9 +845,9 @@ td.heat { text-align: right; }
     // mezcla por línea o marca
     var dim = vstate.mix === 'marca' ? 'mar' : 'lin', NAMES = dim === 'mar' ? MAR : LIN;
     document.getElementById('vm-h').textContent = 'Mezcla de venta por ' + (dim === 'mar' ? 'marca' : 'línea');
-    var colTot = {}; rk.forEach(function (r) { Object.keys(r.x[dim]).forEach(function (k) { colTot[k] = (colTot[k] || 0) + r.x[dim][k]; }); });
+    var colTot = {}; todos.forEach(function (r) { Object.keys(r.x[dim]).forEach(function (k) { colTot[k] = (colTot[k] || 0) + r.x[dim][k]; }); });
     var cols = Object.keys(colTot).sort(function (p, q) { return colTot[q] - colTot[p]; }).slice(0, 6).map(Number);
-    var rowsMix = rk.slice(0, 12);
+    var rowsMix = fx.concat(rk.slice(0, 12));
     function cell(val, base) {
       var p = base > 0 ? val / base : 0, al = Math.max(0, Math.min(1, p)) * 0.85;
       return '<td class="heat" style="background:rgba(8,103,136,' + (p > 0 ? (0.06 + al).toFixed(2) : 0) + ');color:' + (al > 0.45 ? '#fff' : 'inherit') + '">' + (p > 0.0005 ? nf1.format(p * 100) + '%' : '·') + '</td>';
@@ -854,7 +862,7 @@ td.heat { text-align: right; }
     // selector y detalle
     if (vstate.sel == null || !cur[vstate.sel]) vstate.sel = lider ? lider.k : null;
     var sel = document.getElementById('vd-sel');
-    sel.innerHTML = rk.map(function (r, i) { return '<option value="' + r.k + '">' + (i + 1) + '. ' + esc(vname(r.k)) + '</option>'; }).join('');
+    sel.innerHTML = todos.map(function (r) { return '<option value="' + r.k + '">' + (esFijo(r.k) ? 0 : rk.indexOf(r) + 1) + '. ' + esc(vname(r.k)) + '</option>'; }).join('');
     if (vstate.sel != null) sel.value = String(vstate.sel);
     var M12 = vMonths();
     drawHist(M12);
@@ -864,7 +872,6 @@ td.heat { text-align: right; }
   function drawVendDet(cur, tot, M12) {
     var k = vstate.sel, x = k != null ? cur[k] : null;
     document.getElementById('vd-nom').textContent = k != null ? vname(k) : '—';
-    document.querySelectorAll('#t-vend tbody tr, #t-vhist tbody tr[data-v]').forEach(function (tr) { tr.classList.toggle('sel', +tr.getAttribute('data-v') === k); });
     if (!x) { ['vd-lin', 'vd-mar', 'ch-vend'].forEach(function (id) { document.getElementById(id).innerHTML = ''; }); document.querySelector('#t-vprod tbody').innerHTML = ''; return; }
     function hbars(obj, names, col) {
       var ks = Object.keys(obj).map(Number).filter(function (i) { return obj[i] > 0; }).sort(function (p, q) { return obj[q] - obj[p]; }).slice(0, 8);
@@ -880,7 +887,7 @@ td.heat { text-align: right; }
     }).join('') || '<tr><td colspan="5" style="color:var(--tinta-3)">Sin productos.</td></tr>';
 
     // 12 meses: venta del vendedor y su posición cada mes
-    var meses = M12.map(function (mo) { return { l: mo.l, v: mo.ag[k] ? mo.ag[k].v : 0, pos: mo.pos[k] || null, n: mo.n, sh: mo.ag[k] && mo.tot ? mo.ag[k].v / mo.tot : 0 }; });
+    var meses = M12.map(function (mo) { return { l: mo.l, v: mo.ag[k] ? mo.ag[k].v : 0, pos: mo.pos[k] == null ? null : mo.pos[k], n: mo.n, sh: mo.ag[k] && mo.tot ? mo.ag[k].v / mo.tot : 0 }; });
     var el = document.getElementById('ch-vend');
     var W = widthOf(el), Hh = 230, ml = 54, mr = 10, mt = 22, mb = 26, iw = W - ml - mr, ih = Hh - mt - mb;
     var mx = niceMax(Math.max.apply(null, meses.map(function (q) { return q.v; }).concat([1])));
@@ -888,8 +895,8 @@ td.heat { text-align: right; }
     for (var g = 0; g <= 4; g++) { var gy = mt + ih - ih * g / 4; s += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + gy + '" y2="' + gy + '" stroke="#e7ecef"/><text x="' + (ml - 8) + '" y="' + (gy + 4) + '" text-anchor="end">' + usdc(mx * g / 4) + '</text>'; }
     meses.forEach(function (q, j) {
       var cx = ml + bw * j + bw / 2, h = q.v / mx * ih;
-      s += '<rect x="' + (cx - bar / 2) + '" y="' + (mt + ih - h) + '" width="' + bar + '" height="' + Math.max(0, h) + '" rx="2" fill="' + (q.pos === 1 ? '#ED0023' : '#086788') + '"><title>' + q.l + ': ' + usd(q.v) + (q.pos ? ' · puesto ' + q.pos + ' de ' + q.n + ' · ' + pct(q.sh) + ' del total' : '') + '</title></rect>';
-      if (q.pos) s += '<text x="' + cx + '" y="' + (mt + ih - h - 6) + '" text-anchor="middle" style="fill:var(--tinta);font-weight:600">#' + q.pos + '</text>';
+      s += '<rect x="' + (cx - bar / 2) + '" y="' + (mt + ih - h) + '" width="' + bar + '" height="' + Math.max(0, h) + '" rx="2" fill="' + (q.pos === 1 ? '#ED0023' : '#086788') + '"><title>' + q.l + ': ' + usd(q.v) + (q.pos != null ? ' · ' + (q.pos ? 'puesto ' + q.pos + ' de ' + q.n : 'fuera del ranking (posición 0)') + ' · ' + pct(q.sh) + ' del total' : '') + '</title></rect>';
+      if (q.pos != null) s += '<text x="' + cx + '" y="' + (mt + ih - h - 6) + '" text-anchor="middle" style="fill:var(--tinta);font-weight:600">#' + q.pos + '</text>';
       if (W > 520 || j % 2 === 0) s += '<text x="' + cx + '" y="' + (Hh - 8) + '" text-anchor="middle">' + q.l + '</text>';
     });
     el.innerHTML = svgEl(W, Hh, s) + '<p class="foot" style="margin:6px 0 0">#n = puesto en el ranking de ese mes. En rojo, los meses en que fue el número 1.</p>';
@@ -954,7 +961,7 @@ td.heat { text-align: right; }
   window.addEventListener('beforeprint', render);
 
   document.getElementById('sub').textContent = 'Corte ' + fdate(H) + ' · Profit Plus · HD_A01';
-  document.getElementById('foot').innerHTML = '<b>Cómo se calcula.</b> Inventario: stock de todos los almacenes × último costo en $ (ult_cos_om). Venta neta: renglones de factura ÷ tasa de la factura, menos devoluciones; excluye anuladas. Margen: (venta − costo) ÷ venta con el último costo de cada renglón. Rotación: costo de venta de 90 días ÷ inventario. Capital quieto: baja rotación + sin movimiento. Vendedores: vendedor asignado a la factura o devolución; marca = categoría del artículo en Profit. Generado el ' + esc(D.gen) + ' por el job INFORME_INVENTARIO_KD (solo lectura sobre Profit Plus).';
+  document.getElementById('foot').innerHTML = '<b>Cómo se calcula.</b> Inventario: stock de todos los almacenes × último costo en $ (ult_cos_om). Venta neta: renglones de factura ÷ tasa de la factura, menos devoluciones; excluye anuladas. Margen: (venta − costo) ÷ venta con el último costo de cada renglón. Rotación: costo de venta de 90 días ÷ inventario. Capital quieto: baja rotación + sin movimiento. Vendedores: vendedor asignado a la factura o devolución; VENTAS MAYORES no compite en el ranking (posición 0) pero suma en el total del equipo; marca = categoría del artículo en Profit. Generado el ' + esc(D.gen) + ' por el job INFORME_INVENTARIO_KD (solo lectura sobre Profit Plus).';
   render();
 })();
 </script>
