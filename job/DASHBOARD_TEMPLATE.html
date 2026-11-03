@@ -817,7 +817,7 @@ td.heat { text-align: right; }
       var pv = prev[r.k] ? prev[r.k].v : null;
       var tl = topKey(r.x.lin), tm = topKey(r.x.mar);
       var mg = r.v > 0 ? (r.v - r.x.c) / r.v : null;
-      return '<tr data-v="' + r.k + '" tabindex="0"' + '' + '><td class="r"><b>' + pos + '</b></td><td>' + ch + '</td><td>' + esc(vname(r.k)) + '</td><td class="r">' + usd(r.v) + '</td>' +
+      return '<tr data-v="' + r.k + '" tabindex="0"><td class="r"><b>' + pos + '</b></td><td>' + ch + '</td><td>' + esc(vname(r.k)) + '</td><td class="r">' + usd(r.v) + '</td>' +
         '<td class="r"><span class="share"><i style="width:' + Math.round(Math.min(1, r.v / maxV) * 60) + 'px"></i>' + pct(tot ? r.v / tot : null) + '</span></td>' +
         '<td class="r">' + (R.prevOk ? delta(r.v, pv) : '—') + '</td><td class="r' + (mg != null && mg < 0 ? ' neg' : '') + '">' + pct(mg) + '</td><td class="r hide-sm">' + int(r.x.u) + '</td>' +
         '<td class="hide-sm">' + (tl == null ? '—' : esc(LIN[tl] || '') + ' <small style="color:var(--tinta-3)">' + pct(r.x.lin[tl] / r.v) + '</small>') + '</td>' +
