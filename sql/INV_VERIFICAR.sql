@@ -42,3 +42,12 @@ FROM (SELECT co_art, SUM(stock_act) AS stock_act FROM dbo.st_almac GROUP BY co_a
 JOIN dbo.art a ON a.co_art = s.co_art
 WHERE s.stock_act > 0 AND a.anulado = 0
 ORDER BY ABS(s.stock_act * a.ult_cos_om) DESC;
+
+
+-- 6) Vendedores: nombres y venta del mes (para la sección de vendedores del dashboard)
+SELECT f.co_ven, v.ven_des, COUNT(*) AS facturas_mes, SUM(f.tot_neto / NULLIF(f.tasa, 0)) AS neto_usd_aprox
+FROM dbo.factura f
+LEFT JOIN dbo.vendedor v ON v.co_ven = f.co_ven
+WHERE f.anulada = 0 AND f.fec_emis >= DATEADD(day, 1 - DAY(GETDATE()), CAST(GETDATE() AS date))
+GROUP BY f.co_ven, v.ven_des
+ORDER BY neto_usd_aprox DESC;

@@ -21,6 +21,9 @@ REM 2) Resumen por linea (se sobreescribe)
 REM 3) Venta diaria por linea desde hace dos anos (analisis por semana, mes y ano)
 %PS% "%BASE%\sql\INV_VENTAS_DIARIAS.sql" "%BASE%\salidas\INV_VENTAS_DIARIAS_KD.csv" || exit /b 1
 
+REM 3b) Venta diaria por vendedor y articulo desde el 1 de enero del ano pasado (seccion de vendedores)
+%PS% "%BASE%\sql\INV_VENTAS_VENDEDOR.sql" "%BASE%\salidas\INV_VENTAS_VENDEDOR_KD.csv" || echo AVISO: no se pudo exportar ventas por vendedor; el informe sale sin esa seccion
+
 REM 4) Foto del inventario a la fecha (archivo nuevo cada semana = costeo historico)
 %PS% "%BASE%\sql\INV_FOTO.sql" "%BASE%\salidas\historico\INV_FOTO_%HOY%.csv" || exit /b 1
 

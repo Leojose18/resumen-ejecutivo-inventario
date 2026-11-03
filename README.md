@@ -49,3 +49,11 @@ El paso 6 del job ejecuta `job/GENERAR_DASHBOARD.ps1`, que no toca la base de da
 - Make adjunta el PDF y el HTML al correo diario junto con el CSV de líneas.
 
 Requisito en el servidor: Google Chrome o Microsoft Edge instalado.
+
+## Desempeño de vendedores
+
+`sql/INV_VENTAS_VENDEDOR.sql` (paso 3b del job, solo SELECT) exporta la venta diaria por vendedor y artículo en $ desde el 1 de enero del año pasado a `salidas/INV_VENTAS_VENDEDOR_KD.csv`. El vendedor es el `co_ven` de la factura o devolución y la marca es la categoría del artículo.
+
+En el informe, la sección **Desempeño de vendedores** muestra para Semana, Mes, 90 días o Año: ranking con posición y cambio de puesto frente al período anterior, % del total, variación, margen, línea y marca principal; mezcla de venta por línea o marca de cada vendedor; y el detalle de un vendedor (venta y puesto de los últimos 12 meses, venta por línea y marca, productos más vendidos). Respeta el filtro de línea.
+
+Si esa exportación falla, el job sigue y el informe sale sin la sección.

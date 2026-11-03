@@ -1,6 +1,6 @@
 # ==================================================================
 #  GENERAR_DASHBOARD.ps1  -  NO toca la base de datos
-#  Lee los CSV del job y genera:
+#  Lee los CSV del job (rotacion, ventas diarias y ventas por vendedor) y genera:
 #    salidas\INV_DASHBOARD_KD.html  informe interactivo con graficas
 #    salidas\INV_DASHBOARD_KD.pdf   el mismo informe en PDF (Chrome o Edge
 #                                   en modo invisible)
@@ -86,6 +86,45 @@ foreach ($d in $dias) {
     [void]$sbD.Append((NUM $d.venta_usd)).Append(',').Append((NUM $d.costo_usd)).Append(',').Append((NUM $d.uds)).Append(']')
 }
 
+# ---------- ventas por vendedor (opcional) ----------
+$venCsv = Join-Path $sal 'INV_VENTAS_VENDEDOR_KD.csv'
+$vend = @()
+if (Test-Path $venCsv) { $vend = @(Import-Csv $venCsv -Delimiter ';' -Encoding UTF8) }
+$venList = New-Object System.Collections.ArrayList; $venIdx = @{}
+$marList = New-Object System.Collections.ArrayList; $marIdx = @{}
+$artList = New-Object System.Collections.ArrayList; $artIdx = @{}
+$sbV = New-Object System.Text.StringBuilder
+$v0 = $null
+if ($vend.Count -gt 0) {
+    $v0 = [datetime]::ParseExact(([string]$vend[0].fecha).Substring(0, 10), 'yyyy-MM-dd', $inv)
+    foreach ($r in $vend) {
+        $f = ([string]$r.fecha).Trim(); if ($f.Length -lt 10) { continue }
+        $dt = [datetime]::ParseExact($f.Substring(0, 10), 'yyyy-MM-dd', $inv)
+        if ($dt -lt $v0) { $v0 = $dt }
+    }
+    $first = $true
+    foreach ($r in $vend) {
+        $f = ([string]$r.fecha).Trim(); if ($f.Length -lt 10) { continue }
+        $dd = ([datetime]::ParseExact($f.Substring(0, 10), 'yyyy-MM-dd', $inv) - $v0).Days
+        $cv = ([string]$r.co_ven).Trim()
+        if (-not $venIdx.ContainsKey($cv)) { $venIdx[$cv] = $venList.Count; [void]$venList.Add(@($cv, ([string]$r.vendedor).Trim())) }
+        $mk = ([string]$r.marca).Trim(); if ($mk -eq '') { $mk = 'SIN MARCA' }
+        if (-not $marIdx.ContainsKey($mk)) { $marIdx[$mk] = $marList.Count; [void]$marList.Add($mk) }
+        $ca = ([string]$r.co_art).Trim()
+        if (-not $artIdx.ContainsKey($ca)) { $artIdx[$ca] = $artList.Count; [void]$artList.Add($ca) }
+        if (-not $first) { [void]$sbV.Append(',') }; $first = $false
+        [void]$sbV.Append('[').Append($dd).Append(',').Append($venIdx[$cv]).Append(',').Append($artIdx[$ca]).Append(',').Append((LIDX $r.linea)).Append(',').Append($marIdx[$mk]).Append(',')
+        [void]$sbV.Append((NUM $r.uds)).Append(',').Append((NUM $r.venta_usd)).Append(',').Append((NUM $r.costo_usd)).Append(']')
+    }
+}
+$sbVen = New-Object System.Text.StringBuilder
+for ($i = 0; $i -lt $venList.Count; $i++) { if ($i -gt 0) { [void]$sbVen.Append(',') }; [void]$sbVen.Append('[').Append((JS $venList[$i][0])).Append(',').Append((JS $venList[$i][1])).Append(']') }
+$sbMar = New-Object System.Text.StringBuilder
+for ($i = 0; $i -lt $marList.Count; $i++) { if ($i -gt 0) { [void]$sbMar.Append(',') }; [void]$sbMar.Append((JS $marList[$i])) }
+$sbArt = New-Object System.Text.StringBuilder
+for ($i = 0; $i -lt $artList.Count; $i++) { if ($i -gt 0) { [void]$sbArt.Append(',') }; [void]$sbArt.Append((JS $artList[$i])) }
+$v0txt = 'null'; if ($v0 -ne $null) { $v0txt = JS ($v0.ToString('yyyy-MM-dd', $inv)) }
+
 $sbL = New-Object System.Text.StringBuilder
 for ($i = 0; $i -lt $lineas.Count; $i++) { if ($i -gt 0) { [void]$sbL.Append(',') }; [void]$sbL.Append((JS $lineas[$i])) }
 $sbE = New-Object System.Text.StringBuilder
@@ -93,14 +132,15 @@ for ($i = 0; $i -lt $estados.Count; $i++) { if ($i -gt 0) { [void]$sbE.Append(',
 
 $gen = (Get-Date).ToString('dd/MM/yyyy HH:mm', $inv)
 $json = '{"corte":' + (JS $corte) + ',"gen":' + (JS $gen) + ',"lineas":[' + $sbL.ToString() + '],"estados":[' + $sbE.ToString() +
-        '],"arts":[' + $sbA.ToString() + '],"dias":[' + $sbD.ToString() + ']}'
+        '],"arts":[' + $sbA.ToString() + '],"dias":[' + $sbD.ToString() + '],"v0":' + $v0txt +
+        ',"vend":[' + $sbVen.ToString() + '],"marcas":[' + $sbMar.ToString() + '],"vart":[' + $sbArt.ToString() + '],"vs":[' + $sbV.ToString() + ']}'
 
 # ---------- HTML ----------
 $plantilla = [IO.File]::ReadAllText($tpl, $utf8)
 if ($plantilla.IndexOf('__KD_DATA__') -lt 0) { throw 'La plantilla no tiene el marcador __KD_DATA__.' }
 $salida = $plantilla.Replace('__KD_DATA__', $json)
 [IO.File]::WriteAllText($html, $salida, $utf8)
-Write-Output ('HTML generado: ' + $html + ' (' + $arts.Count + ' articulos, ' + $dias.Count + ' filas diarias)')
+Write-Output ('HTML generado: ' + $html + ' (' + $arts.Count + ' articulos, ' + $dias.Count + ' filas diarias, ' + $vend.Count + ' filas de vendedores)')
 
 # ---------- PDF con Chrome o Edge invisible ----------
 $candidatos = @(
