@@ -74,7 +74,7 @@ foreach ($a in $arts) {
     [void]$sbA.Append('[').Append((JS $a.co_art)).Append(',').Append((JS $a.descripcion)).Append(',').Append((LIDX $a.linea)).Append(',')
     [void]$sbA.Append((NUM $a.stock)).Append(',').Append((NUM $a.valor_inv_usd)).Append(',').Append((NUM $a.uds_vendidas_90d)).Append(',')
     [void]$sbA.Append((NUM $a.venta_usd_90d)).Append(',').Append((NUM $a.costo_venta_usd_90d)).Append(',').Append((NUM $a.margen_pct)).Append(',')
-    [void]$sbA.Append((NUM $a.cobertura_dias)).Append(',').Append((NUM $a.dias_sin_venta)).Append(',').Append($ei).Append(',').Append((JS $a.clase_abc)).Append(']')
+    [void]$sbA.Append((NUM $a.cobertura_dias)).Append(',').Append((NUM $a.dias_sin_venta)).Append(',').Append($ei).Append(',').Append((JS $a.clase_abc)).Append(',').Append((NUM $a.uds_obsequio_90d)).Append(',').Append((NUM $a.costo_obsequio_usd_90d)).Append(']')
 }
 
 $sbD = New-Object System.Text.StringBuilder

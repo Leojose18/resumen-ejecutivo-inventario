@@ -7,6 +7,7 @@ SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;  -- solo lectura, no bloquea a caja/facturación
 
 -- TODO EN $:  costo = ult_cos_om   |   venta = reng_neto / tasa (neto de descuento)
+-- Obsequios = renglones facturados a precio 0: su costo NO entra en el costo de venta ni en el margen
 DECLARE @dias  int  = 90;                              -- ventana de análisis
 DECLARE @hasta date = CAST(GETDATE() AS date);
 DECLARE @desde date = DATEADD(day, -@dias, @hasta);
@@ -16,7 +17,9 @@ WITH vta AS (
     SELECT rf.co_art,
            SUM(rf.total_art)                              AS uds,
            SUM(rf.reng_neto / NULLIF(f.tasa, 0))          AS venta_usd,
-           SUM(rf.total_art * rf.ult_cos_om)              AS costo_usd
+           SUM(CASE WHEN rf.reng_neto > 0 THEN rf.total_art * rf.ult_cos_om ELSE 0 END) AS costo_usd,   -- sin obsequios
+           SUM(CASE WHEN rf.reng_neto <= 0 THEN rf.total_art ELSE 0 END)                 AS uds_obs,
+           SUM(CASE WHEN rf.reng_neto <= 0 THEN rf.total_art * rf.ult_cos_om ELSE 0 END) AS costo_obs
     FROM dbo.reng_fac rf
     JOIN dbo.factura f ON f.fact_num = rf.fact_num
     WHERE f.anulada = 0
@@ -26,7 +29,9 @@ WITH vta AS (
     SELECT rd.co_art,
            SUM(rd.total_art)                              AS uds,
            SUM(rd.reng_neto / NULLIF(d.tasa, 0))          AS venta_usd,
-           SUM(rd.total_art * rd.ult_cos_om)              AS costo_usd
+           SUM(CASE WHEN rd.reng_neto > 0 THEN rd.total_art * rd.ult_cos_om ELSE 0 END) AS costo_usd,
+           SUM(CASE WHEN rd.reng_neto <= 0 THEN rd.total_art ELSE 0 END)                 AS uds_obs,
+           SUM(CASE WHEN rd.reng_neto <= 0 THEN rd.total_art * rd.ult_cos_om ELSE 0 END) AS costo_obs
     FROM dbo.reng_dvc rd
     JOIN dbo.dev_cli d ON d.fact_num = rd.fact_num
     WHERE d.anulada = 0

@@ -382,7 +382,7 @@ td.heat { text-align: right; }
 
   // ---------- artículos ----------
   var ARTS = D.arts.map(function (r) {
-    return { c: r[0], d: r[1], li: r[2], s: r[3] || 0, vi: r[4] || 0, u: r[5] || 0, vt: r[6] || 0, ct: r[7] || 0, m: r[8], cob: r[9], dsv: r[10], e: EST[r[11]], abc: r[12] };
+    return { c: r[0], d: r[1], li: r[2], s: r[3] || 0, vi: r[4] || 0, u: r[5] || 0, vt: r[6] || 0, ct: r[7] || 0, m: r[8], cob: r[9], dsv: r[10], e: EST[r[11]], abc: r[12], ou: r[13] || 0, oc: r[14] || 0 };
   });
   var DIAS = D.dias;
   var minDay = DIAS.length ? DIAS.reduce(function (a, r) { return r[0] < a ? r[0] : a; }, DIAS[0][0]) : D.corte;
@@ -423,7 +423,8 @@ td.heat { text-align: right; }
     var set = function (id, t) { document.getElementById(id).textContent = t; };
     set('k-valor', usdc(valor)); set('k-valor-n', int(conStock.length) + ' artículos con stock');
     set('k-venta', usdc(venta));
-    set('k-margen', pct(venta > 0 ? (venta - costo) / venta : null)); set('k-margen-n', 'costo de venta ' + usdc(costo));
+    set('k-margen', pct(venta > 0 ? (venta - costo) / venta : null)); var obs = sum(A, function (a) { return a.oc; });
+    set('k-margen-n', 'costo de venta ' + usdc(costo) + (obs > 0 ? ' · obsequios ' + usdc(obs) + ' aparte' : ''));
     set('k-dias', costo > 0 ? int(valor / (costo / 90)) + ' días' : '—');
     set('k-quieto', usdc(quieto)); set('k-quieto-n', pct(valor > 0 ? quieto / valor : null) + ' en baja rotación o sin movimiento');
     set('k-agot', int(agot));
@@ -638,7 +639,8 @@ td.heat { text-align: right; }
     { id: 'rotacion', nom: 'Mayor rotación', f: function (a) { return a.vt > 0; }, s: function (a, b) { return b.vt - a.vt; } },
     { id: 'inmov', nom: 'Sin movimiento', f: function (a) { return a.e === 'SIN MOVIMIENTO'; }, s: function (a, b) { return b.vi - a.vi; } },
     { id: 'margen', nom: 'Margen negativo', f: function (a) { return a.vt > 0 && a.m != null && a.m < 0; }, s: function (a, b) { return (a.vt - a.ct) - (b.vt - b.ct); } },
-    { id: 'nuevo', nom: 'Nuevo ingreso sin ventas', f: function (a) { return a.e === 'NUEVO INGRESO'; }, s: function (a, b) { return b.vi - a.vi; } }
+    { id: 'nuevo', nom: 'Nuevo ingreso sin ventas', f: function (a) { return a.e === 'NUEVO INGRESO'; }, s: function (a, b) { return b.vi - a.vi; } },
+    { id: 'obsequio', nom: 'Obsequios (venta $0)', f: function (a) { return a.oc > 0 || a.ou > 0; }, s: function (a, b) { return b.oc - a.oc; } }
   ];
   function drawListas(A) {
     var q = state.q.trim().toLowerCase();
@@ -650,6 +652,12 @@ td.heat { text-align: right; }
       var rows = A.filter(L.f);
       if (q) rows = rows.filter(function (a) { return String(a.c).toLowerCase().indexOf(q) >= 0 || String(a.d).toLowerCase().indexOf(q) >= 0; });
       rows = rows.sort(L.s).slice(0, 25);
+      if (L.id === 'obsequio') {
+        var tb = rows.length ? rows.map(function (a) {
+          return '<tr><td class="desc">' + esc(a.d) + '<small>' + esc(a.c) + ' · ' + esc(LIN[a.li] || '') + '</small></td><td class="r">' + int(a.ou) + '</td><td class="r">' + usd(a.oc) + '</td><td class="r">' + usd(a.vt) + '</td><td class="r">' + int(a.s) + '</td></tr>';
+        }).join('') : '<tr><td colspan="5" style="color:var(--tinta-3)">No hubo obsequios en 90 días.</td></tr>';
+        return '<div class="panel" data-panel="' + L.id + '"' + (state.tab === L.id ? '' : ' hidden') + '><h3 class="list-h">' + L.nom + '</h3><p class="foot" style="margin:0 0 8px">Artículos facturados a precio $0 en los últimos 90 días. Su costo no entra en el margen.</p><div class="tbl-wrap"><table><thead><tr><th class="plain">Artículo</th><th class="plain r">Uds obsequiadas</th><th class="plain r">Costo obsequiado</th><th class="plain r">Venta 90 d</th><th class="plain r">Stock</th></tr></thead><tbody>' + tb + '</tbody></table></div></div>';
+      }
       var body = rows.length ? rows.map(function (a) {
         var ek = a.e === 'SIN MOVIMIENTO' ? 'SIN' : a.e;
         return '<tr><td class="desc">' + esc(a.d) + '<small>' + esc(a.c) + ' · ' + esc(LIN[a.li] || '') + '</small></td><td class="r">' + int(a.s) + '</td><td class="r">' + usd(a.vi) + '</td><td class="r">' + usd(a.vt) + '</td><td class="r' + (a.m != null && a.m < 0 ? ' neg' : '') + '">' + (a.m == null ? '—' : nf1.format(a.m) + '%') + '</td><td class="r hide-sm">' + (a.cob == null || a.s <= 0 ? '—' : int(a.cob) + ' d') + '</td><td class="r hide-sm">' + (a.dsv == null ? '—' : int(a.dsv) + ' d') + '</td><td><span class="pill ' + ek + '">' + esc(a.e) + '</span></td></tr>';
@@ -693,7 +701,9 @@ td.heat { text-align: right; }
     var sm = A.filter(function (x) { return x.e === 'SIN MOVIMIENTO'; });
     if (sm.length) out.push({ c: 'warn', k: 'Capital inmovilizado', t: usd(sum(sm, function (x) { return x.vi; })) + ' en ' + int(sm.length) + ' artículos sin ninguna venta en 90 días.' });
     var ng = A.filter(function (x) { return x.vt > 0 && x.m != null && x.m < 0; }).length;
-    if (ng) out.push({ c: 'bad', k: 'Margen negativo', t: int(ng) + ' artículos se vendieron por debajo del último costo. Revisa si el costo está bien cargado en Profit.' });
+    if (ng) out.push({ c: 'bad', k: 'Margen negativo', t: int(ng) + ' artículos se vendieron por debajo del último costo (sin contar obsequios). Revisa precios y descuentos.' });
+    var ob = A.filter(function (x) { return x.oc > 0; });
+    if (ob.length) out.push({ c: 'warn', k: 'Obsequios', t: usd(sum(ob, function (x) { return x.oc; })) + ' de costo en ' + int(sum(ob, function (x) { return x.ou; })) + ' unidades facturadas a $0 (' + int(ob.length) + ' artículos). No entran en el margen; ver la lista "Obsequios".' });
     document.getElementById('insights').innerHTML = out.map(function (o) { return '<li class="' + o.c + '"><div><span class="k">' + o.k + '</span>' + o.t + '</div></li>'; }).join('');
   }
 
@@ -955,7 +965,7 @@ td.heat { text-align: right; }
   window.addEventListener('beforeprint', render);
 
   document.getElementById('sub').textContent = 'Corte ' + fdate(H) + ' · Profit Plus · HD_A01';
-  document.getElementById('foot').innerHTML = '<b>Cómo se calcula.</b> Inventario: stock de todos los almacenes × último costo en $ (ult_cos_om). Venta neta: renglones de factura ÷ tasa de la factura, menos devoluciones; excluye anuladas. Margen: (venta − costo) ÷ venta con el último costo de cada renglón. Rotación: costo de venta de 90 días ÷ inventario. Capital quieto: baja rotación + sin movimiento. Vendedores: vendedor asignado a la factura o devolución; VENTAS MAYORES no compite en el ranking (posición 0) pero suma en el total del equipo; marca = categoría del artículo en Profit. Generado el ' + esc(D.gen) + ' por el job INFORME_INVENTARIO_KD (solo lectura sobre Profit Plus).';
+  document.getElementById('foot').innerHTML = '<b>Cómo se calcula.</b> Inventario: stock de todos los almacenes × último costo en $ (ult_cos_om). Venta neta: renglones de factura ÷ tasa de la factura, menos devoluciones; excluye anuladas. Margen: (venta − costo) ÷ venta con el último costo en $ (ult_cos_om) de cada renglón; los obsequios (renglones a precio $0) van aparte y no entran en el margen. Rotación: costo de venta de 90 días ÷ inventario. Capital quieto: baja rotación + sin movimiento. Vendedores: vendedor asignado a la factura o devolución; VENTAS MAYORES no compite en el ranking (posición 0) pero suma en el total del equipo; marca = categoría del artículo en Profit. Generado el ' + esc(D.gen) + ' por el job INFORME_INVENTARIO_KD (solo lectura sobre Profit Plus).';
   render();
 })();
 </script>

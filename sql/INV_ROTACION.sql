@@ -1,12 +1,13 @@
 ﻿/* =====================================================================
    INV_ROTACION.sql  -  SOLO CONSULTA (no modifica la base de datos)
    Detalle por artículo, TODO EN $: stock, valor (ult_cos_om), venta neta,
-   costo y margen 90 días, cobertura, rotación, ABC y estado.
+   costo y margen 90 días (sin obsequios), obsequios, cobertura, rotación, ABC y estado.
    ===================================================================== */
 SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;  -- solo lectura, no bloquea a caja/facturación
 
 -- TODO EN $:  costo = ult_cos_om   |   venta = reng_neto / tasa (neto de descuento)
+-- Obsequios = renglones facturados a precio 0: su costo NO entra en el costo de venta ni en el margen
 DECLARE @dias  int  = 90;                              -- ventana de análisis
 DECLARE @hasta date = CAST(GETDATE() AS date);
 DECLARE @desde date = DATEADD(day, -@dias, @hasta);
@@ -16,7 +17,9 @@ WITH vta AS (
     SELECT rf.co_art,
            SUM(rf.total_art)                              AS uds,
            SUM(rf.reng_neto / NULLIF(f.tasa, 0))          AS venta_usd,
-           SUM(rf.total_art * rf.ult_cos_om)              AS costo_usd
+           SUM(CASE WHEN rf.reng_neto > 0 THEN rf.total_art * rf.ult_cos_om ELSE 0 END) AS costo_usd,   -- sin obsequios
+           SUM(CASE WHEN rf.reng_neto <= 0 THEN rf.total_art ELSE 0 END)                 AS uds_obs,
+           SUM(CASE WHEN rf.reng_neto <= 0 THEN rf.total_art * rf.ult_cos_om ELSE 0 END) AS costo_obs
     FROM dbo.reng_fac rf
     JOIN dbo.factura f ON f.fact_num = rf.fact_num
     WHERE f.anulada = 0
@@ -26,7 +29,9 @@ WITH vta AS (
     SELECT rd.co_art,
            SUM(rd.total_art)                              AS uds,
            SUM(rd.reng_neto / NULLIF(d.tasa, 0))          AS venta_usd,
-           SUM(rd.total_art * rd.ult_cos_om)              AS costo_usd
+           SUM(CASE WHEN rd.reng_neto > 0 THEN rd.total_art * rd.ult_cos_om ELSE 0 END) AS costo_usd,
+           SUM(CASE WHEN rd.reng_neto <= 0 THEN rd.total_art ELSE 0 END)                 AS uds_obs,
+           SUM(CASE WHEN rd.reng_neto <= 0 THEN rd.total_art * rd.ult_cos_om ELSE 0 END) AS costo_obs
     FROM dbo.reng_dvc rd
     JOIN dbo.dev_cli d ON d.fact_num = rd.fact_num
     WHERE d.anulada = 0
@@ -55,6 +60,8 @@ WITH vta AS (
            ISNULL(v.uds,0)       - ISNULL(d.uds,0)        AS uds,
            ISNULL(v.venta_usd,0) - ISNULL(d.venta_usd,0)  AS venta_usd,
            ISNULL(v.costo_usd,0) - ISNULL(d.costo_usd,0)  AS costo_usd,
+           ISNULL(v.uds_obs,0)   - ISNULL(d.uds_obs,0)    AS uds_obs,
+           ISNULL(v.costo_obs,0) - ISNULL(d.costo_obs,0)  AS costo_obs,
            CAST(u.ult_venta  AS date)                     AS ult_venta,
            CAST(a.fec_ult_co AS date)                     AS ult_compra
     FROM dbo.art a
@@ -99,7 +106,7 @@ WITH vta AS (
 )
 SELECT fila FROM (
     SELECT 0 AS ord, '' AS k,
-           'fecha_corte;co_art;descripcion;modelo;linea;sublinea;categoria;procedencia;stock;ult_cos_usd;valor_inv_usd;uds_vendidas_90d;venta_usd_90d;costo_venta_usd_90d;margen_usd_90d;margen_pct;venta_diaria_uds;cobertura_dias;rotacion;ult_venta;dias_sin_venta;ult_compra;clase_abc;estado' AS fila
+           'fecha_corte;co_art;descripcion;modelo;linea;sublinea;categoria;procedencia;stock;ult_cos_usd;valor_inv_usd;uds_vendidas_90d;venta_usd_90d;costo_venta_usd_90d;margen_usd_90d;margen_pct;venta_diaria_uds;cobertura_dias;rotacion;ult_venta;dias_sin_venta;ult_compra;clase_abc;estado;uds_obsequio_90d;costo_obsequio_usd_90d' AS fila
     UNION ALL
     SELECT 1, co_art, CONCAT(
         CONVERT(varchar(10), @hasta, 23), ';', co_art, ';',
@@ -110,7 +117,8 @@ SELECT fila FROM (
         CAST(uds AS decimal(20,2)), ';', CAST(venta_usd AS decimal(20,2)), ';', CAST(costo_usd AS decimal(20,2)), ';', CAST(margen_usd AS decimal(20,2)), ';', CAST(margen_pct AS decimal(20,1)), ';',
         CAST(uds / @d AS decimal(20,3)), ';', CAST(cobertura AS decimal(20,1)), ';', CAST(rotacion AS decimal(20,2)), ';',
         CONVERT(varchar(10), ult_venta, 23), ';', DATEDIFF(day, ult_venta, @hasta), ';',
-        CONVERT(varchar(10), ult_compra, 23), ';', clase_abc, ';', estado)
+        CONVERT(varchar(10), ult_compra, 23), ';', clase_abc, ';', estado, ';',
+        CAST(uds_obs AS decimal(20,2)), ';', CAST(costo_obs AS decimal(20,2)))
     FROM fin
 ) x
 ORDER BY ord, k;
