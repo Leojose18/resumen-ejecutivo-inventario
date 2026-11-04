@@ -54,6 +54,14 @@ Requisito en el servidor: Google Chrome o Microsoft Edge instalado.
 
 `sql/INV_VENTAS_VENDEDOR.sql` (paso 3b del job, solo SELECT) exporta la venta diaria por vendedor y artículo en $ desde el 1 de enero del año pasado a `salidas/INV_VENTAS_VENDEDOR_KD.csv`. El vendedor es el `co_ven` de la factura o devolución y la marca es la categoría del artículo.
 
-En el informe, la sección **Desempeño de vendedores** muestra para Semana, Mes, 90 días o Año: ranking con posición y cambio de puesto frente al período anterior, % del total, variación, margen, línea y marca principal; mezcla de venta por línea o marca de cada vendedor; y el detalle de un vendedor (venta y puesto de los últimos 12 meses, venta por línea y marca, productos más vendidos). Respeta el filtro de línea.
+En el informe, la sección **Desempeño de vendedores** muestra para Semana, Mes, 90 días o Año: ranking con posición y cambio de puesto frente al período anterior, % del total, variación, margen, línea y marca principal. Además: histórico de 12 meses con venta y puesto mensual de cada vendedor, mezcla de venta por línea o marca de los últimos 12 meses y un bloque general del equipo (venta mensual, por línea, por marca y productos más vendidos). VENTAS MAYORES no compite en el ranking (posición 0) pero suma en el total. Respeta el filtro de línea.
 
 Si esa exportación falla, el job sigue y el informe sale sin la sección.
+
+## Obsequios
+Renglones facturados a precio 0 (`reng_neto <= 0`). Su costo no entra en el costo de venta ni en el margen por artículo y por línea; se reporta aparte (`uds_obsequio_90d`, `costo_obsequio_usd_90d`) y en la lista "Obsequios" del informe.
+
+## Make
+`make/escenario_6804251_blueprint.json`: copia del escenario que envía el correo diario a las 07:00 (solo si el informe se actualizó en las últimas 24 h) con el PDF, el dashboard HTML y el CSV por línea.
+
+Ver `CONTEXTO_PARA_IA.md` para retomar el proyecto con otro asistente.

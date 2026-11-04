@@ -1,0 +1,164 @@
+{
+  "name": "Resumen Ejecutivo Inventario - Krash Depot",
+  "flow": [
+    {
+      "id": 1,
+      "module": "google-drive:getAFileFolderMetadata",
+      "version": 4,
+      "parameters": {
+        "__IMTCONN__": 9395563
+      },
+      "mapper": {
+        "file": "1xIMVEGKNsXw4PO3jNH6xUxg5ZsC_kfep",
+        "select": "map",
+        "select1": "file"
+      },
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 2,
+      "module": "google-drive:getAFile",
+      "version": 4,
+      "parameters": {
+        "__IMTCONN__": 9395563
+      },
+      "filter": {
+        "name": "Solo si el informe se actualizó en las últimas 24 h",
+        "conditions": [
+          [
+            {
+              "a": "{{1.modifiedTime}}",
+              "b": "{{addHours(now; -24)}}",
+              "o": "date:greater"
+            }
+          ]
+        ]
+      },
+      "mapper": {
+        "file": "1xIMVEGKNsXw4PO3jNH6xUxg5ZsC_kfep",
+        "select": "map"
+      },
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 3,
+      "module": "google-drive:getAFile",
+      "version": 4,
+      "parameters": {
+        "__IMTCONN__": 9395563
+      },
+      "mapper": {
+        "file": "11eYpO9fJVSoV0UCskjwwuI7GIsZ9VkTU",
+        "select": "map"
+      },
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 5,
+      "module": "google-drive:getAFile",
+      "version": 4,
+      "parameters": {
+        "__IMTCONN__": 9395563
+      },
+      "mapper": {
+        "file": "15uXEuCHITQLJnV7vYOQ8fxpmqjXwNxXt",
+        "select": "map"
+      },
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 6,
+      "module": "google-drive:getAFile",
+      "version": 4,
+      "parameters": {
+        "__IMTCONN__": 9395563
+      },
+      "mapper": {
+        "file": "1EpM2JktMAL9Aq82ULNjdcBFnibTg8-4B",
+        "select": "map"
+      },
+      "metadata": {
+        "designer": {
+          "x": 1200,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 4,
+      "module": "google-email:sendAnEmail",
+      "version": 4,
+      "parameters": {
+        "__IMTCONN__": 9333438
+      },
+      "mapper": {
+        "to": [
+          "leojose18@gmail.com"
+        ],
+        "content": "{{toString(2.data)}}",
+        "subject": "Resumen Ejecutivo Inventario - Krash Depot - {{formatDate(1.modifiedTime; \"DD/MM/YYYY\")}}",
+        "bodyType": "rawHtml",
+        "attachments": [
+          {
+            "data": "{{6.data}}",
+            "filename": "Resumen_Ejecutivo_Inventario_KD_{{formatDate(1.modifiedTime; \"YYYYMMDD\")}}.pdf"
+          },
+          {
+            "data": "{{5.data}}",
+            "filename": "Dashboard_Inventario_KD_{{formatDate(1.modifiedTime; \"YYYYMMDD\")}}.html"
+          },
+          {
+            "data": "{{3.data}}",
+            "filename": "INV_RESUMEN_LINEA_KD.csv"
+          }
+        ]
+      },
+      "metadata": {
+        "designer": {
+          "x": 1500,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "instant": false,
+    "version": 1,
+    "designer": {
+      "orphans": []
+    },
+    "scenario": {
+      "dlq": false,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "roundtrips": 1,
+      "sequential": false,
+      "confidential": false,
+      "freshVariables": false
+    }
+  },
+  "scheduling": {
+    "type": "daily",
+    "time": "07:00"
+  }
+}
