@@ -14,7 +14,7 @@ Pega este archivo completo al iniciar la conversación, junto con los archivos d
    - Costo = `ult_cos_om`.
    - Venta = `reng_neto / tasa` (neto de descuento).
    - No se usa `cos_pro_om`: da valores negativos en esta base.
-3. **Los archivos de salida se sobrescriben en el mismo lugar**, nunca se borran y se vuelven a crear. Así Google Drive conserva el File ID que usa Make.
+3. **Los archivos de salida se sobrescriben en el mismo lugar**, nunca se borran y se vuelven a crear. Así Google Drive conserva el File ID que usa Make. Lo mismo vale para actualizar scripts desde Drive: hay que reemplazar el contenido del mismo archivo. Si se borra y se crea de nuevo, Drive para escritorio lo baja como `NOMBRE (1).ext` y el job no lo encuentra; eso dejó el informe sin actualizar del 3 al 21 de noviembre de 2026.
 4. **Archivos .ps1 en ASCII**, con los acentos como entidades HTML en el correo. **.cmd con CRLF.** Los .sql en UTF-8 con BOM.
 5. En PowerShell **no se puede nombrar una función `H`**: choca con el alias `h` de Get-History. Ya pasó una vez y por eso la función se llama `HtmlTxt`. Tampoco se puede usar `$args` como variable propia.
 
@@ -104,6 +104,9 @@ Los pasos 1 a 4 se ejecutan con `EXPORTAR_CSV.ps1 <archivo.sql> <salida.csv>`. C
      - Bloque "Equipo de ventas · últimos 12 meses".
   8. **Artículos a revisar**, con 7 listas: agotados, sobrestock, mayor rotación, sin movimiento, margen negativo, nuevo ingreso y obsequios.
 - **Marca de Krash Depot:** rojo #ED0023, azul #086788, celeste #06AED5, amarillo #F9B32F, crema #FFF1D0, fuente Poppins.
+
+## Bitácora
+Cada ejecución del job escribe `salidas\JOB_LOG.txt`, que se sincroniza con Drive. Trae la hora de cada paso, las filas exportadas y el error si algo falla.
 
 ## Cómo probar un cambio
 1. Editar los archivos en la carpeta de D: o en Drive. Si se edita en Drive, se reemplaza el archivo completo en `sql` o `job`.
